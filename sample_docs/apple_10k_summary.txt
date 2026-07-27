@@ -1,0 +1,59 @@
+APPLE INC.
+FORM 10-K ANNUAL REPORT — FISCAL YEAR 2023 SUMMARY
+(Excerpts and management summary prepared for analyst reference)
+
+ITEM 1 — COMPANY OVERVIEW
+
+Apple Inc. ("the Company") designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide, and sells a variety of related services. The Company's products include iPhone, Mac, iPad, AirPods, Apple TV, Apple Watch, and Beats, in addition to a growing portfolio of cloud, advertising, and digital content services. Apple operates through retail and online stores and an extensive network of third-party cellular carriers, wholesalers, retailers, and resellers. The Company's fiscal year 2023 ended on September 30, 2023.
+
+ITEM 7 — MANAGEMENT'S DISCUSSION AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS
+
+FINANCIAL HIGHLIGHTS
+
+Total net sales for fiscal 2023 were $394.3 billion, compared to $394.3 billion in the prior fiscal year, reflecting a substantially flat year-over-year performance amid foreign exchange headwinds and macroeconomic softness in personal computing categories. Net sales by category were as follows:
+
+  - iPhone: $200.6 billion
+  - Mac: $29.4 billion
+  - iPad: $28.3 billion
+  - Wearables, Home and Accessories: $39.8 billion
+  - Services: $85.2 billion
+
+Services delivered an all-time revenue record, growing at a double-digit pace year-over-year, driven by paid subscriptions, advertising, the App Store, AppleCare, and cloud services. iPhone net sales of $200.6 billion remained the Company's largest single revenue contributor. Mac and iPad net sales declined relative to fiscal 2022, primarily reflecting a difficult compare against pandemic-era demand and continued weakness in the broader PC market.
+
+YEAR-OVER-YEAR COMPARISON (2022 VS 2023)
+
+In fiscal 2022, total net sales were $394.3 billion, with iPhone contributing approximately $205.5 billion, Mac approximately $40.2 billion, iPad approximately $29.3 billion, Wearables approximately $41.2 billion, and Services approximately $78.1 billion. In fiscal 2023, the Services segment grew to $85.2 billion, while Mac declined to $29.4 billion. Gross margin expanded year-over-year due to a favorable mix shift toward higher-margin Services and disciplined cost management.
+
+ITEM 1A — RISK FACTORS
+
+The Company faces a number of risks that could materially affect its business, financial condition, and results of operations. Key risk factors include:
+
+  - Supply Chain Disruption: A significant portion of the Company's manufacturing capacity is concentrated in a limited number of locations. Disruptions arising from natural disasters, public health events, labor actions, or geopolitical tensions could materially impair the Company's ability to manufacture and deliver products on schedule.
+
+  - China Market Exposure: The Company derives a meaningful portion of its net sales from Greater China and depends on the region for a substantial share of its manufacturing operations. Changes in trade policy, tariffs, export controls, or local consumer sentiment could adversely impact results.
+
+  - Regulatory Pressure: The Company is subject to evolving regulation in the United States, the European Union, and other jurisdictions concerning antitrust, app-store practices, digital services taxation, data privacy, and product safety. Adverse rulings or new legislation may require changes to business practices or result in significant fines.
+
+  - Competition: The markets for the Company's products and services are highly competitive and characterized by rapid technological change. Competitors include both larger diversified technology companies and smaller specialized firms; aggressive pricing, alternative platforms, and shifting consumer preferences could erode market share or margins.
+
+MANAGEMENT DISCUSSION — STRATEGIC PRIORITIES
+
+Management remains focused on expanding the installed base of active devices, deepening engagement within the Services ecosystem, and investing in product innovation across silicon, augmented reality, and on-device machine learning. The Services growth strategy emphasizes recurring subscription revenue, expanded advertising, and a broader content catalog. Gross margin expansion is a continued priority, supported by a favorable Services mix, vertical integration of custom silicon, and prudent component cost management.
+
+BALANCE SHEET HIGHLIGHTS (AS OF FISCAL YEAR-END 2023)
+
+  - Cash, cash equivalents, and marketable securities: $162.1 billion
+  - Long-term debt: $95.3 billion
+  - Total shareholders' equity: $62.1 billion
+
+The Company maintained a strong liquidity position and continued its capital return program through share repurchases and quarterly cash dividends.
+
+RESEARCH AND DEVELOPMENT
+
+Research and development expense for fiscal 2023 was $29.9 billion, an increase over the prior year. R&D investment supports custom silicon development, services platform expansion, augmented reality, machine learning, and next-generation product categories.
+
+ITEM 7A — QUANTITATIVE AND QUALITATIVE DISCLOSURES ABOUT MARKET RISK
+
+The Company is exposed to foreign currency exchange rate risk, interest rate risk, and commodity price risk. The Company uses derivative financial instruments, including foreign currency forward and option contracts and interest rate swaps, to hedge a portion of these exposures in accordance with established risk management policies.
+
+End of summary.
