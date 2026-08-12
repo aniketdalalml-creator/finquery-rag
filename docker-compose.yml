@@ -2,27 +2,32 @@ version: "3.9"
 
 services:
   api:
-    build: .
+    build:
+      context: ./backend
     container_name: finquery-api
-    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
     env_file:
       - .env
-    volumes:
-      - ./vectorstore:/app/vectorstore
-      - ./data:/app/data
-      - ./sample_docs:/app/sample_docs
-
-  ui:
-    build: .
-    container_name: finquery-ui
-    command: streamlit run app/streamlit_app.py --server.port 8501 --server.address 0.0.0.0
-    ports:
-      - "8501:8501"
-    env_file:
-      - .env
     environment:
-      FINQUERY_API_URL: http://api:8000
+      CHAT_MODE: ${CHAT_MODE:-dummy}
+    volumes:
+      - ./backend/vectorstore:/app/vectorstore
+      - ./backend/data:/app/data
+      - ./backend/sample_docs:/app/sample_docs
+
+  frontend:
+    image: node:22-alpine
+    container_name: finquery-frontend
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       - api

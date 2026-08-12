@@ -1,25 +1,29 @@
-# FinQuery RAG — common dev tasks
-# Use:  make <target>
+# FinQuery — monorepo
+#
+#   frontend/   React + Vite UI
+#   backend/    FastAPI + RAG
 
 PYTHON ?= python
-export PYTHONPATH := .
+BACKEND := backend
+FRONTEND := frontend
 
-.PHONY: install api ui ingest test docker-up docker-down clean
+.PHONY: install api frontend ingest test docker-up docker-down clean
 
 install:
-	$(PYTHON) -m pip install -r requirements.txt
+	cd $(BACKEND) && $(PYTHON) -m pip install -r requirements.txt
+	cd $(FRONTEND) && npm install
 
 api:
-	uvicorn api.main:app --reload --port 8000
+	cd $(BACKEND) && PYTHONPATH=. uvicorn app.main:app --reload --port 8000
 
-ui:
-	streamlit run app/streamlit_app.py
+frontend:
+	cd $(FRONTEND) && npm run dev
 
 ingest:
-	$(PYTHON) src/pipeline.py
+	cd $(BACKEND) && PYTHONPATH=. $(PYTHON) -m app.rag.pipeline
 
 test:
-	pytest -v
+	cd $(BACKEND) && PYTHONPATH=. pytest -v
 
 docker-up:
 	docker compose up --build
@@ -28,4 +32,4 @@ docker-down:
 	docker compose down
 
 clean:
-	$(PYTHON) -c "import shutil, pathlib; r=pathlib.Path('.'); shutil.rmtree(r/'vectorstore/chroma_db', ignore_errors=True); [shutil.rmtree(p, ignore_errors=True) for p in r.rglob('__pycache__') if p.is_dir()]"
+	$(PYTHON) -c "import shutil, pathlib; r=pathlib.Path('backend'); shutil.rmtree(r/'vectorstore/chroma_db', ignore_errors=True); [shutil.rmtree(p, ignore_errors=True) for p in r.rglob('__pycache__') if p.is_dir()]"
