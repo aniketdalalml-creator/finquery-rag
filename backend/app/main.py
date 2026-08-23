@@ -11,11 +11,14 @@ from contextlib import asynccontextmanager
 import logging
 import time
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.router import api_router
+from app.api.v1 import v1_router
 from app.core.config import config
+from app.core.errors import ConflictError, DomainError, NotFoundError, ValidationError
 from app.services.chat import ChatService
 import app.state as state
 
@@ -47,14 +50,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:8501",
-        "http://127.0.0.1:8501",
-        "*",
-    ],
-    allow_methods=["*"],
+    allow_origins=config.BACKEND_CORS_ORIGINS,
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -75,3 +72,28 @@ async def log_requests(request, call_next):
 
 
 app.include_router(api_router)
+app.include_router(v1_router, prefix="/api/v1")
+
+
+# ── Domain error → HTTP mapping (keeps routes free of try/except) ──
+
+def _domain_error_response(request: Request, exc: DomainError, status_code: int):
+    return JSONResponse(
+        status_code=status_code,
+        content={"detail": str(exc), "error": type(exc).__name__},
+    )
+
+
+@app.exception_handler(NotFoundError)
+async def _not_found_handler(request: Request, exc: NotFoundError):
+    return _domain_error_response(request, exc, 404)
+
+
+@app.exception_handler(ConflictError)
+async def _conflict_handler(request: Request, exc: ConflictError):
+    return _domain_error_response(request, exc, 409)
+
+
+@app.exception_handler(ValidationError)
+async def _validation_handler(request: Request, exc: ValidationError):
+    return _domain_error_response(request, exc, 422)

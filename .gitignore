@@ -11,3 +11,8 @@ frontend/node_modules/
 frontend/dist/
 _stitch_preview/
 .pytest_cache/
+
+# Finance data layer local artifacts
+backend/finance_rag.db
+backend/*.db
+backend/storage_data/

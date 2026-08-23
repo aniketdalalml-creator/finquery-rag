@@ -66,6 +66,12 @@ def test_health(client):
     assert body["total_chunks"] == 12
 
 
+def test_health_live(client):
+    r = client.get("/health/live")
+    assert r.status_code == 200
+    assert r.json() == {"status": "alive"}
+
+
 def test_ingest(client):
     r = client.post("/ingest", json={})
     assert r.status_code == 200

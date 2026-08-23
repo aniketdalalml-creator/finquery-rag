@@ -25,6 +25,18 @@ ingest:
 test:
 	cd $(BACKEND) && PYTHONPATH=. pytest -v
 
+migrate-up:
+	cd $(BACKEND) && PYTHONPATH=. $(PYTHON) migrate.py up
+
+migrate-down:
+	cd $(BACKEND) && PYTHONPATH=. $(PYTHON) migrate.py down
+
+migrate-status:
+	cd $(BACKEND) && PYTHONPATH=. $(PYTHON) migrate.py status
+
+seed:
+	cd $(BACKEND) && PYTHONPATH=. $(PYTHON) seed_demo.py
+
 docker-up:
 	docker compose up --build
 

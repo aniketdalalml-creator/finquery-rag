@@ -7,6 +7,12 @@ import app.state as state
 router = APIRouter()
 
 
+@router.get("/health/live")
+async def health_live():
+    """Liveness probe — process is up, no dependency checks."""
+    return {"status": "alive"}
+
+
 @router.get("/health", response_model=HealthResponse)
 async def health():
     ready = False

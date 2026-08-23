@@ -19,6 +19,12 @@ def _env(name: str, default: str = "") -> str:
     return os.getenv(name, default).strip()
 
 
+def _as_absolute_path(value: str) -> Path:
+    """Anchor relative paths to REPO_ROOT so behaviour never depends on cwd."""
+    path = Path(value)
+    return path if path.is_absolute() else (REPO_ROOT / path).resolve()
+
+
 @dataclass
 class RAGConfig:
     """Central config. Toggle CHAT_MODE to implement RAG feature-by-feature."""
@@ -33,7 +39,7 @@ class RAGConfig:
     # ── Groq LLM ──────────────────────────────
     GROQ_API_KEY: str = field(default_factory=lambda: _env("GROQ_API_KEY"))
     LLM_MODEL: str = field(
-        default_factory=lambda: _env("LLM_MODEL", "llama-3.1-8b-instant")
+        default_factory=lambda: _env("LLM_MODEL", "openai/gpt-oss-120b")
     )
     LLM_TEMPERATURE: float = 0.1
     MAX_TOKENS: int = 1024
@@ -63,6 +69,45 @@ class RAGConfig:
     )
     SAMPLE_DOCS_PATH: str = field(
         default_factory=lambda: str(BACKEND_ROOT / "sample_docs")
+    )
+
+    # ── HTTP / CORS ───────────────────────────
+    # Comma-separated list of allowed browser origins (override via .env)
+    BACKEND_CORS_ORIGINS: list[str] = field(
+        default_factory=lambda: [
+            origin
+            for origin in (
+                part.strip()
+                for part in _env(
+                    "BACKEND_CORS_ORIGINS",
+                    "http://localhost:5173,http://127.0.0.1:5173",
+                ).split(",")
+            )
+            if origin
+        ]
+    )
+
+    # ── Database ──────────────────────────────
+    # Default: zero-setup local SQLite file. Examples:
+    #   mysql+pymysql://user:password@localhost:3306/llm_db
+    #   postgresql+psycopg://user:password@localhost:5432/finance_rag
+    DATABASE_URL: str = field(
+        default_factory=lambda: _env(
+            "DATABASE_URL", f"sqlite:///{(BACKEND_ROOT / 'finance_rag.db').as_posix()}"
+        )
+    )
+
+    # ── Object storage ────────────────────────
+    # local = filesystem storage rooted at STORAGE_PATH (S3/MinIO later)
+    STORAGE_BACKEND: str = field(
+        default_factory=lambda: _env("STORAGE_BACKEND", "local").lower()
+    )
+    STORAGE_PATH: str = field(
+        default_factory=lambda: str(
+            _as_absolute_path(
+                _env("STORAGE_PATH", str(BACKEND_ROOT / "storage_data"))
+            )
+        )
     )
 
 

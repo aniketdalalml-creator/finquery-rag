@@ -1,5 +1,5 @@
-import { ChatPage } from '../features/chat'
+import { DashboardPage } from '../features/dashboard'
 
 export default function App() {
-  return <ChatPage />
+  return <DashboardPage />
 }
