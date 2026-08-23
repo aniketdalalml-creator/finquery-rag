@@ -33,3 +33,16 @@ export interface DocumentListItem {
   processing_status: string
   created_at: string
 }
+
+export interface DocumentStatus {
+  document_id: number
+  status: string
+  page_count: number | null
+  error: string | null
+}
+
+export interface DocumentPageItem {
+  page_number: number
+  cleaned_text: string | null
+  extraction_method: string
+}

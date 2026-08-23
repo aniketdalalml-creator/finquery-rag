@@ -88,10 +88,17 @@ def migrated_engine(tmp_path_factory):
 
 @pytest.fixture
 def db_session(migrated_engine) -> Session:
-    """Function-scoped session wrapped in a rolled-back transaction."""
+    """Function-scoped session wrapped in a rolled-back transaction.
+
+    App code may call session.commit() (e.g. mark_queued); under test we
+    swap it for a flush so nothing ever escapes the outer transaction —
+    otherwise commits land in the shared scratch DB file and leak across
+    tests.
+    """
     connection = migrated_engine.connect()
     transaction = connection.begin()
     session = Session(bind=connection, join_transaction_mode="create_savepoint")
+    session.commit = session.flush  # type: ignore[method-assign]
     try:
         yield session
     finally:

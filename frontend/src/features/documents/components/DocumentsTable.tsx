@@ -1,4 +1,5 @@
 import { StatusBadge } from './StatusBadge'
+import { ProcessButton } from './ProcessButton'
 import type { DocumentListItem } from '../../../types/api'
 import type { ListStatus } from '../../../hooks/useDocuments'
 
@@ -14,9 +15,20 @@ function formatDate(value: string | null): string {
 type DocumentsTableProps = {
   status: ListStatus
   documents: DocumentListItem[]
+  onProcessed: () => void
+  onProcessError: (message: string) => void
+  onSelectDocument: (document: DocumentListItem) => void
 }
 
-export function DocumentsTable({ status, documents }: DocumentsTableProps) {
+const VIEWABLE_STATUSES = new Set(['processed', 'completed', 'partially_processed'])
+
+export function DocumentsTable({
+  status,
+  documents,
+  onProcessed,
+  onProcessError,
+  onSelectDocument,
+}: DocumentsTableProps) {
   if (status === 'loading') {
     return (
       <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-10 text-center text-body-md text-on-surface-variant">
@@ -68,38 +80,65 @@ export function DocumentsTable({ status, documents }: DocumentsTableProps) {
           </tr>
         </thead>
         <tbody>
-          {documents.map((doc) => (
-            <tr
-              key={doc.id}
-              className="border-b border-outline-variant/60 last:border-b-0 hover:bg-surface-container-low"
-            >
-              <td className="px-6 py-4">
-                <span className="text-body-md font-medium text-on-surface">
-                  {doc.title}
-                </span>
-                <span className="ml-2 text-label-sm tabular-nums text-on-surface-variant/60">
-                  #{doc.id}
-                </span>
-              </td>
-              <td className="px-6 py-4 text-body-md text-on-surface-variant">
-                {doc.company_name ?? '—'}
-              </td>
-              <td className="px-6 py-4">
-                <span className="rounded-lg bg-secondary-container px-2.5 py-1 text-label-sm font-semibold text-on-secondary-container">
-                  {doc.document_type}
-                </span>
-              </td>
-              <td className="px-6 py-4 text-data-tabular text-on-surface-variant">
-                {formatDate(doc.filing_date)}
-              </td>
-              <td className="px-6 py-4 text-data-tabular text-on-surface-variant">
-                {formatDate(doc.created_at)}
-              </td>
-              <td className="px-6 py-4 text-right">
-                <StatusBadge status={doc.processing_status} />
-              </td>
-            </tr>
-          ))}
+          {documents.map((doc) => {
+            const viewable = VIEWABLE_STATUSES.has(doc.processing_status)
+            return (
+              <tr
+                key={doc.id}
+                onClick={viewable ? () => onSelectDocument(doc) : undefined}
+                className={`border-b border-outline-variant/60 last:border-b-0 hover:bg-surface-container-low ${
+                  viewable ? 'cursor-pointer' : ''
+                }`}
+                title={viewable ? 'Open document viewer' : undefined}
+              >
+                <td className="px-6 py-4">
+                  <span
+                    className={`text-body-md font-medium ${
+                      viewable
+                        ? 'text-primary underline-offset-2 hover:underline'
+                        : 'text-on-surface'
+                    }`}
+                  >
+                    {doc.title}
+                  </span>
+                  <span className="ml-2 text-label-sm tabular-nums text-on-surface-variant/60">
+                    #{doc.id}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-body-md text-on-surface-variant">
+                  {doc.company_name ?? '—'}
+                </td>
+                <td className="px-6 py-4">
+                  <span className="rounded-lg bg-secondary-container px-2.5 py-1 text-label-sm font-semibold text-on-secondary-container">
+                    {doc.document_type}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-data-tabular text-on-surface-variant">
+                  {formatDate(doc.filing_date)}
+                </td>
+                <td className="px-6 py-4 text-data-tabular text-on-surface-variant">
+                  {formatDate(doc.created_at)}
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <div
+                    className="flex items-center justify-end gap-3"
+                    // Row click opens the viewer; control clicks stay local.
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {(doc.processing_status === 'uploaded' ||
+                      doc.processing_status === 'failed') && (
+                      <ProcessButton
+                        documentId={doc.id}
+                        onFinished={onProcessed}
+                        onError={onProcessError}
+                      />
+                    )}
+                    <StatusBadge status={doc.processing_status} />
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

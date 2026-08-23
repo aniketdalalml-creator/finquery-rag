@@ -2,6 +2,8 @@ import type {
   CompanyOption,
   DashboardStats,
   DocumentListItem,
+  DocumentPageItem,
+  DocumentStatus,
   HealthResponse,
   UploadedDocument,
 } from '../types/api'
@@ -51,6 +53,35 @@ export async function listDocuments(): Promise<DocumentListItem[]> {
     throw new Error(await parseErrorDetail(res))
   }
   return res.json() as Promise<DocumentListItem[]>
+}
+
+export async function processDocument(documentId: number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/v1/documents/${documentId}/process`, {
+    method: 'POST',
+  })
+  if (!res.ok) {
+    throw new Error(await parseErrorDetail(res))
+  }
+}
+
+export async function getDocumentStatus(
+  documentId: number,
+): Promise<DocumentStatus> {
+  const res = await fetch(`${API_BASE_URL}/v1/documents/${documentId}/status`)
+  if (!res.ok) {
+    throw new Error(await parseErrorDetail(res))
+  }
+  return res.json() as Promise<DocumentStatus>
+}
+
+export async function getDocumentPages(
+  documentId: number,
+): Promise<DocumentPageItem[]> {
+  const res = await fetch(`${API_BASE_URL}/v1/documents/${documentId}/pages`)
+  if (!res.ok) {
+    throw new Error(await parseErrorDetail(res))
+  }
+  return res.json() as Promise<DocumentPageItem[]>
 }
 
 export async function uploadDocument(

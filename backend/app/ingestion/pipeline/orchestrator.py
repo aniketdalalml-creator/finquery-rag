@@ -80,6 +80,9 @@ class DocumentIngestionPipeline:
             raise PipelineError(f"Document {document_id} not found")
 
         result = IngestionResult(document_id=document_id, status="failed")
+        # Pre-bind so a raising load stage still hits the guard below
+        # instead of crashing on an unassigned variable.
+        raw_doc: RawDocument | None = None
         try:
             with result.add("validate"):
                 self._validate(document, force)
@@ -96,11 +99,12 @@ class DocumentIngestionPipeline:
             if raw_doc is None or not raw_doc.pages:
                 # Every downstream stage needs the loaded document; stop here
                 # so a load failure surfaces as `failed`, never as a crash.
+                # The finally block below records stats and returns result.
                 result.status = "failed"
                 result.error = "load produced no pages"
                 self._mark_finished(document, "failed", error=result.error)
                 self.session.commit()
-                return self._finalize(result, started)
+                return result
 
             pages_payload, _ocr_notes = self._run_ocr_stage(result, document, raw_doc)
 
