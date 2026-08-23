@@ -3,7 +3,10 @@ import { ArrowUpRight } from 'lucide-react'
 import { DashboardSidebar } from './components/DashboardSidebar'
 import { DashboardHeader } from './components/DashboardHeader'
 import type { NavItemId } from './navigation'
-import { MOCK_RECENT_DOCUMENTS, MOCK_STATS, type RecentDocument } from './mockData'
+import { MOCK_RECENT_DOCUMENTS, type RecentDocument } from './mockData'
+import { useBackendHealth } from '../../hooks/useBackendHealth'
+import { useDashboardStats } from '../../hooks/useDashboardStats'
+import DocumentsPage from '../documents/DocumentsPage'
 
 const PAGE_TITLES: Record<NavItemId, string> = {
   dashboard: 'Financial Intelligence',
@@ -18,14 +21,22 @@ const STATUS_STYLES: Record<RecentDocument['status'], string> = {
   Failed: 'bg-error-container text-on-error-container',
 }
 
-function StatCard({ label, value, delta }: (typeof MOCK_STATS)[number]) {
+function StatCard({
+  label,
+  value,
+  hint,
+}: {
+  label: 'Documents' | 'Companies' | 'Financial Metrics'
+  value: string
+  hint: string
+}) {
   return (
     <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6">
       <p className="text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
         {label}
       </p>
       <p className="mt-3 text-headline-lg tabular-nums text-on-surface">{value}</p>
-      <p className="mt-1 text-label-sm text-on-surface-variant/80">{delta}</p>
+      <p className="mt-1 text-label-sm text-on-surface-variant/80">{hint}</p>
     </div>
   )
 }
@@ -41,21 +52,43 @@ function PlaceholderView({ title }: { title: string }) {
   )
 }
 
+function formatCount(n: number): string {
+  return n.toLocaleString('en-US')
+}
+
 export default function DashboardPage() {
   const [active, setActive] = useState<NavItemId>('dashboard')
   const [question, setQuestion] = useState('')
+  const backendStatus = useBackendHealth()
+  const { status: statsStatus, stats } = useDashboardStats()
 
   function handleAsk(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
   }
 
+  const statCards = [
+    { label: 'Documents' as const, key: 'documents' as const },
+    { label: 'Companies' as const, key: 'companies' as const },
+    { label: 'Financial Metrics' as const, key: 'financial_metrics' as const },
+  ].map(({ label, key }) => {
+    if (statsStatus === 'ready' && stats) {
+      return { label, value: formatCount(stats[key]), hint: 'Live from database' }
+    }
+    if (statsStatus === 'error') {
+      return { label, value: '—', hint: 'Stats unavailable (backend offline)' }
+    }
+    return { label, value: '…', hint: 'Loading stats…' }
+  })
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-surface">
       <DashboardSidebar active={active} onSelect={setActive} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <DashboardHeader title="FinanceIQ" />
+        <DashboardHeader title="FinanceIQ" status={backendStatus} />
         <main className="flex-1 overflow-y-auto px-8 py-8">
-          {active === 'dashboard' ? (
+          {active === 'documents' ? (
+            <DocumentsPage />
+          ) : active === 'dashboard' ? (
             <div className="mx-auto max-w-5xl space-y-10">
               <div>
                 <h1 className="text-display-lg tracking-tight text-on-surface">
@@ -90,7 +123,7 @@ export default function DashboardPage() {
 
               <section aria-label="Key statistics">
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-                  {MOCK_STATS.map((stat) => (
+                  {statCards.map((stat) => (
                     <StatCard key={stat.label} {...stat} />
                   ))}
                 </div>

@@ -10,7 +10,10 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        // Legacy routes live at backend root (/health, /query): strip /api.
+        // Versioned routes already carry /api/v1 on the backend: pass them through.
+        rewrite: (path) =>
+          path.startsWith('/api/v1') ? path : path.replace(/^\/api/, ''),
       },
     },
   },

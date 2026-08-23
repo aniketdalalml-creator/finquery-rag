@@ -1,9 +1,3 @@
-export type StatCard = {
-  label: 'Documents' | 'Companies' | 'Financial Metrics'
-  value: string
-  delta: string
-}
-
 export type RecentDocument = {
   id: number
   title: string
@@ -13,12 +7,6 @@ export type RecentDocument = {
   uploadedAt: string
   status: 'Processed' | 'Processing' | 'Failed'
 }
-
-export const MOCK_STATS: StatCard[] = [
-  { label: 'Documents', value: '128', delta: '+12 this month' },
-  { label: 'Companies', value: '36', delta: '+3 this quarter' },
-  { label: 'Financial Metrics', value: '18,542', delta: '+1,204 this month' },
-]
 
 export const MOCK_RECENT_DOCUMENTS: RecentDocument[] = [
   {
