@@ -16,7 +16,11 @@ function isPdf(file: File): boolean {
   )
 }
 
-export function UploadPdfCard() {
+type UploadPdfCardProps = {
+  onSuccess?: (document: UploadedDocument) => void
+}
+
+export function UploadPdfCard({ onSuccess }: UploadPdfCardProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [selected, setSelected] = useState<File | null>(null)
   const [companyId, setCompanyId] = useState<string>('')
@@ -49,6 +53,7 @@ export function UploadPdfCard() {
         setState({ kind: 'success', document, filename: selected.name })
         setSelected(null)
         if (inputRef.current) inputRef.current.value = ''
+        onSuccess?.(document)
       })
       .catch((err: Error) => {
         setState({ kind: 'error', message: err.message })

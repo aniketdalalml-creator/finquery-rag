@@ -1,6 +1,7 @@
 import type {
   CompanyOption,
   DashboardStats,
+  DocumentListItem,
   HealthResponse,
   UploadedDocument,
 } from '../types/api'
@@ -42,6 +43,14 @@ export async function listCompanies(): Promise<CompanyOption[]> {
   }
   const body = (await res.json()) as { items: CompanyOption[] }
   return body.items ?? []
+}
+
+export async function listDocuments(): Promise<DocumentListItem[]> {
+  const res = await fetch(`${API_BASE_URL}/v1/documents`)
+  if (!res.ok) {
+    throw new Error(await parseErrorDetail(res))
+  }
+  return res.json() as Promise<DocumentListItem[]>
 }
 
 export async function uploadDocument(

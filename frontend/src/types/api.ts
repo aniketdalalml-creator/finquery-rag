@@ -22,3 +22,14 @@ export interface UploadedDocument {
   title: string
   processing_status: string
 }
+
+export interface DocumentListItem {
+  id: number
+  company_id: number | null
+  company_name: string | null
+  title: string
+  document_type: string
+  filing_date: string | null
+  processing_status: string
+  created_at: string
+}

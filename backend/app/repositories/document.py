@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 
 from app.models.document import Document, DocumentChunk, DocumentPage, DocumentSection
 from app.repositories.base import BaseRepository
@@ -17,6 +18,16 @@ class DocumentRepository(BaseRepository[Document]):
             func.lower(Document.file_hash) == file_hash.lower(),
         )
         return self._scalar(stmt)
+
+    def list_all(self, limit: int = 50) -> list[Document]:
+        """Newest-first across all companies, company eagerly loaded."""
+        stmt = (
+            select(Document)
+            .options(selectinload(Document.company))
+            .order_by(Document.id.desc())
+            .limit(limit)
+        )
+        return list(self.session.scalars(stmt).all())
 
     def list_by_company(
         self,

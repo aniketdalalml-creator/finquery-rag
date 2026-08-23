@@ -19,6 +19,7 @@ from app.schemas.document import (
     DocumentChunkCreate,
     DocumentChunkRead,
     DocumentCreate,
+    DocumentListRead,
     DocumentPageCreate,
     DocumentPageRead,
     DocumentRead,
@@ -39,6 +40,35 @@ def _service(db: Session = Depends(get_db)) -> DocumentService:
 
 
 # ── ingestion workflow (upload → process → status) ───────────────
+
+
+@router.get("", response_model=list[DocumentListRead])
+def list_documents(
+    limit: int = Query(default=50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    """All documents, newest first (documents list view)."""
+    service = DocumentService(db)
+    rows = []
+    for document in service.list_documents(limit=limit):
+        company_name = None
+        if document.company is not None:
+            company_name = (
+                document.company.display_name or document.company.legal_name
+            )
+        rows.append(
+            DocumentListRead(
+                id=document.id,
+                company_id=document.company_id,
+                company_name=company_name,
+                title=document.title,
+                document_type=document.document_type,
+                filing_date=document.filing_date,
+                processing_status=document.processing_status,
+                created_at=document.created_at,
+            )
+        )
+    return rows
 
 
 @router.post("/upload", response_model=DocumentRead, status_code=status.HTTP_201_CREATED)

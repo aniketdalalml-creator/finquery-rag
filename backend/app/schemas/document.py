@@ -77,6 +77,21 @@ class DocumentRead(BaseModel):
     updated_at: datetime
 
 
+class DocumentListRead(BaseModel):
+    """Compact row for the documents list view."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    company_id: int | None
+    company_name: str | None = None
+    title: str
+    document_type: str
+    filing_date: date | None
+    processing_status: str
+    created_at: datetime
+
+
 class DocumentPageCreate(StrictModel):
     page_number: int = Field(ge=1)
     raw_text: str | None = None

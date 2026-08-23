@@ -37,6 +37,9 @@ class DocumentService:
 
     # ── documents ────────────────────────────────────────────────
 
+    def list_documents(self, limit: int = 50) -> list[Document]:
+        return self.documents.list_all(limit=limit)
+
     def create_document(self, payload: DocumentCreate) -> Document:
         if payload.company_id is not None and (
             self.companies.get(payload.company_id) is None
