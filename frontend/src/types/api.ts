@@ -46,3 +46,15 @@ export interface DocumentPageItem {
   cleaned_text: string | null
   extraction_method: string
 }
+
+export interface RagSource {
+  document_id: number | null
+  page_start: number | null
+  page_end: number | null
+  score: number
+}
+
+export interface RagAnswer {
+  answer: string
+  sources: RagSource[]
+}

@@ -60,8 +60,38 @@ class RAGConfig:
     CHUNK_SIZE: int = 400
     CHUNK_OVERLAP: int = 50
 
+    # ── Chunk embeddings (document_chunks table) ──
+    # Provider behind EmbeddingProvider abstraction: "jina" today,
+    # swap via env later. Key always comes from the environment.
+    EMBEDDING_PROVIDER: str = field(
+        default_factory=lambda: _env("EMBEDDING_PROVIDER", "jina").lower()
+    )
+    EMBEDDING_MODEL: str = field(
+        default_factory=lambda: _env("EMBEDDING_MODEL", "jina-embeddings-v2-base-en")
+    )
+    # Falls back to JINA_API_KEY so one key serves both paths.
+    EMBEDDING_API_KEY: str = field(
+        default_factory=lambda: _env("EMBEDDING_API_KEY") or _env("JINA_API_KEY")
+    )
+    EMBEDDING_API_URL: str = "https://api.jina.ai/v1/embeddings"
+    EMBEDDING_BATCH_SIZE: int = field(
+        default_factory=lambda: int(_env("EMBEDDING_BATCH_SIZE", "32"))
+    )
+
     # ── Retrieval ─────────────────────────────
     TOP_K: int = 5
+
+    # ── Qdrant vector index ───────────────────
+    # Server mode: QDRANT_URL e.g. http://localhost:6333 (+ optional key).
+    # Empty/"local" → embedded local mode persisting under QDRANT_LOCAL_PATH.
+    QDRANT_URL: str = field(default_factory=lambda: _env("QDRANT_URL"))
+    QDRANT_API_KEY: str = field(default_factory=lambda: _env("QDRANT_API_KEY"))
+    QDRANT_COLLECTION: str = field(
+        default_factory=lambda: _env("QDRANT_COLLECTION", "document_chunks")
+    )
+    QDRANT_LOCAL_PATH: str = field(
+        default_factory=lambda: str(BACKEND_ROOT / "vectorstore" / "qdrant")
+    )
 
     # ── Paths ─────────────────────────────────
     RAW_DOCS_PATH: str = field(

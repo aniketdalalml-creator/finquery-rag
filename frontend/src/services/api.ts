@@ -3,6 +3,7 @@ import type {
   DashboardStats,
   DocumentListItem,
   DocumentPageItem,
+  RagAnswer,
   DocumentStatus,
   HealthResponse,
   UploadedDocument,
@@ -82,6 +83,18 @@ export async function getDocumentPages(
     throw new Error(await parseErrorDetail(res))
   }
   return res.json() as Promise<DocumentPageItem[]>
+}
+
+export async function askQuestion(question: string): Promise<RagAnswer> {
+  const res = await fetch(`${API_BASE_URL}/v1/rag/query`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question }),
+  })
+  if (!res.ok) {
+    throw new Error(await parseErrorDetail(res))
+  }
+  return res.json() as Promise<RagAnswer>
 }
 
 export async function uploadDocument(

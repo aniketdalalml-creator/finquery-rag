@@ -1,0 +1,13 @@
+.env
+.env.*
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+tests/
+storage_data/
+vectorstore/
+data/raw/*
+!data/raw/.gitkeep
+*.db
+alembic/versions/__pycache__/

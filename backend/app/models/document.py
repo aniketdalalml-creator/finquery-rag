@@ -179,6 +179,15 @@ class DocumentChunk(Base, CreatedOnlyMixin):
         "metadata", JsonType, nullable=False, default=dict
     )
 
+    # ── Embedding (nullable until the embedding service fills them) ──
+    # The vector itself, stored inline; identified by `embedding_id`.
+    embedding_vector: Mapped[list[float] | None] = mapped_column(
+        JsonType, nullable=True
+    )
+    embedding_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    embedding_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    embedded_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
     document = relationship("Document", back_populates="chunks")
     section = relationship("DocumentSection")
 

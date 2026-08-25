@@ -6,6 +6,8 @@ import type { NavItemId } from './navigation'
 import { MOCK_RECENT_DOCUMENTS, type RecentDocument } from './mockData'
 import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useDashboardStats } from '../../hooks/useDashboardStats'
+import { askQuestion } from '../../services/api'
+import type { RagAnswer } from '../../types/api'
 import DocumentsPage from '../documents/DocumentsPage'
 
 const PAGE_TITLES: Record<NavItemId, string> = {
@@ -59,11 +61,28 @@ function formatCount(n: number): string {
 export default function DashboardPage() {
   const [active, setActive] = useState<NavItemId>('dashboard')
   const [question, setQuestion] = useState('')
+  const [answerState, setAnswerState] = useState<RagAnswer & { question: string } | null>(null)
+  const [asking, setAsking] = useState(false)
+  const [askError, setAskError] = useState<string | null>(null)
   const backendStatus = useBackendHealth()
   const { status: statsStatus, stats } = useDashboardStats()
 
-  function handleAsk(event: FormEvent<HTMLFormElement>) {
+  async function handleAsk(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const trimmed = question.trim()
+    if (!trimmed || asking) return
+    setAsking(true)
+    setAskError(null)
+    setAnswerState(null)
+    try {
+      setAnswerState({ ...(await askQuestion(trimmed)), question: trimmed })
+    } catch (err) {
+      setAskError(
+        err instanceof Error ? err.message : 'Could not answer the question.',
+      )
+    } finally {
+      setAsking(false)
+    }
   }
 
   const statCards = [
@@ -115,11 +134,66 @@ export default function DashboardPage() {
                 />
                 <button
                   type="submit"
-                  className="self-start rounded-xl bg-[#006d38] px-8 py-3 text-body-md font-semibold text-on-primary transition-colors hover:bg-[#005c2f]"
+                  disabled={asking || !question.trim()}
+                  className="self-start rounded-xl bg-[#006d38] px-8 py-3 text-body-md font-semibold text-on-primary transition-colors hover:bg-[#005c2f] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Ask
+                  {asking ? 'Thinking…' : 'Ask'}
                 </button>
               </form>
+
+              {askError && (
+                <div
+                  role="alert"
+                  className="rounded-2xl border border-error/30 bg-error-container/60 px-6 py-4 text-body-md text-on-error-container"
+                >
+                  {askError}
+                </div>
+              )}
+
+              {answerState && (
+                <section
+                  aria-label="Answer"
+                  className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6"
+                >
+                  <h2 className="text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
+                    Question
+                  </h2>
+                  <p className="mt-2 whitespace-pre-wrap text-body-md font-medium text-on-surface">
+                    {answerState.question}
+                  </p>
+                  <h2 className="mt-6 text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
+                    AI Answer
+                  </h2>
+                  <p className="mt-2 whitespace-pre-wrap text-body-lg leading-relaxed text-on-surface">
+                    {answerState.answer}
+                  </p>
+                  {answerState.sources.length > 0 && (
+                    <>
+                      <h3 className="mt-6 text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
+                        Sources
+                      </h3>
+                      <ul className="mt-3 flex flex-wrap gap-2">
+                        {answerState.sources.map((source, index) => (
+                          <li
+                            key={`${source.document_id}-${index}`}
+                            className="rounded-lg bg-secondary-container px-3 py-1.5 text-label-sm font-semibold text-on-secondary-container tabular-nums"
+                          >
+                            Doc #{source.document_id}
+                            {source.page_start !== null &&
+                              ` · pp. ${source.page_start}${
+                                source.page_end !== source.page_start
+                                  ? `–${source.page_end}`
+                                  : ''
+                              }`}
+                            {' · '}
+                            {(source.score * 100).toFixed(0)}%
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </section>
+              )}
 
               <section aria-label="Key statistics">
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">

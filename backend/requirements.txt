@@ -3,6 +3,7 @@
 
 fastapi==0.115.6
 uvicorn==0.27.1
+python-multipart>=0.0.9,<0.1
 streamlit==1.43.2
 pydantic==2.11.10
 python-dotenv==1.0.1
@@ -14,6 +15,7 @@ pymysql>=1.1,<2
 cryptography
 
 chromadb==1.5.9
+qdrant-client>=1.12,<2
 langchain==0.3.30
 langchain-community==0.3.31
 langchain-text-splitters==0.3.11

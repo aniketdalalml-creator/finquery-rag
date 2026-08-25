@@ -1,33 +1,73 @@
-version: "3.9"
+name: finquery
 
 services:
-  api:
-    build:
-      context: ./backend
-    container_name: finquery-api
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-llm_db}
+      MYSQL_USER: ${MYSQL_USER:-finquery}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set in .env}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    volumes:
+      - qdrant_data:/qdrant/storage
+    ports:
+      - "6333:6333"   # dashboard/debugging; remove in locked-down deployments
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: mysql+pymysql://${MYSQL_USER:-finquery}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE:-llm_db}
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION:-document_chunks}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-jina}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-jina-embeddings-v2-base-en}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      CHAT_MODE: ${CHAT_MODE:-rag}
+      STORAGE_BACKEND: local
+      STORAGE_PATH: /app/storage_data
+    env_file:
+      - path: .env
+        required: false
     ports:
       - "8000:8000"
-    env_file:
-      - .env
-    environment:
-      CHAT_MODE: ${CHAT_MODE:-dummy}
     volumes:
-      - ./backend/vectorstore:/app/vectorstore
-      - ./backend/data:/app/data
-      - ./backend/sample_docs:/app/sample_docs
+      - uploads:/app/storage_data
+    depends_on:
+      mysql:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/api/v1/documents', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
 
   frontend:
-    image: node:22-alpine
-    container_name: finquery-frontend
-    working_dir: /app
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    build: ./frontend
     ports:
-      - "5173:5173"
-    environment:
-      VITE_API_URL: http://localhost:8000
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - "8080:80"
     depends_on:
-      - api
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  qdrant_data:
+  uploads:
