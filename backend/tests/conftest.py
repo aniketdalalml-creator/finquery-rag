@@ -14,6 +14,12 @@ BACKEND_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if BACKEND_ROOT not in sys.path:
     sys.path.insert(0, BACKEND_ROOT)
 
+# Throwaway secret so JWT minting works in tests without a real .env.
+# Re-apply after dotenv (app.core.config uses override=True).
+os.environ["AUTH_SECRET_KEY"] = "test-secret-key-not-for-production"
+from app.core import config as _app_config  # noqa: F401
+os.environ["AUTH_SECRET_KEY"] = "test-secret-key-not-for-production"
+
 from pathlib import Path
 
 import pytest
@@ -121,6 +127,29 @@ def api_client(db_session):
         yield TestClient(app)
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+@pytest.fixture
+def auth_client(api_client):
+    """Authenticated TestClient with Authorization set from register+login."""
+    email = "tester@example.com"
+    password = "StrongPassword123!"
+    registered = api_client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": password},
+    )
+    assert registered.status_code == 201, registered.text
+    logged_in = api_client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": password},
+    )
+    assert logged_in.status_code == 200, logged_in.text
+    token = logged_in.json()["access_token"]
+    api_client.headers.update({"Authorization": f"Bearer {token}"})
+    try:
+        yield api_client
+    finally:
+        api_client.headers.pop("Authorization", None)
 
 
 @pytest.fixture

@@ -11,6 +11,8 @@ from app.repositories.document import (
 from app.repositories.metric import FinancialMetricRepository
 from app.repositories.table import FinancialTableRepository
 
+from app.repositories.user import UserRepository
+
 __all__ = [
     "BaseRepository",
     "CompanyRepository",
@@ -20,4 +22,5 @@ __all__ = [
     "DocumentChunkRepository",
     "FinancialMetricRepository",
     "FinancialTableRepository",
+    "UserRepository",
 ]

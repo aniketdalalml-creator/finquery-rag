@@ -3,4 +3,4 @@
 from app.db.base import Base  # noqa: F401
 
 # Import models so Base.metadata is fully populated (needed by Alembic).
-from app.models import company, document, metric, table  # noqa: F401
+from app.models import company, document, metric, table, user  # noqa: F401

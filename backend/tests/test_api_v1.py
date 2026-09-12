@@ -17,40 +17,40 @@ def _create_company(client, ticker="TSTC", legal_name=None):
 # ── companies ────────────────────────────────────────────────────────────────
 
 
-def test_create_and_get_company(api_client):
-    response = _create_company(api_client)
+def test_create_and_get_company(auth_client):
+    response = _create_company(auth_client)
     assert response.status_code == 201, response.text
     body = response.json()
     assert body["ticker"] == "TSTC"
     assert body["display_name"] == "TSTC"
 
-    fetched = api_client.get(f"/api/v1/companies/{body['id']}")
+    fetched = auth_client.get(f"/api/v1/companies/{body['id']}")
     assert fetched.status_code == 200
     assert fetched.json()["legal_name"] == body["legal_name"]
 
 
-def test_get_missing_company_404(api_client):
-    assert api_client.get("/api/v1/companies/987654").status_code == 404
+def test_get_missing_company_404(auth_client):
+    assert auth_client.get("/api/v1/companies/987654").status_code == 404
 
 
-def test_duplicate_company_conflict_409(api_client):
-    first = _create_company(api_client, ticker="DUPL")
+def test_duplicate_company_conflict_409(auth_client):
+    first = _create_company(auth_client, ticker="DUPL")
     assert first.status_code == 201
-    second = _create_company(api_client, ticker="DUPL")
+    second = _create_company(auth_client, ticker="DUPL")
     assert second.status_code == 409
 
 
-def test_invalid_country_422(api_client):
-    response = api_client.post(
+def test_invalid_country_422(auth_client):
+    response = auth_client.post(
         "/api/v1/companies",
         json={"legal_name": "Bad Country Ltd", "country": "USA"},
     )
     assert response.status_code == 422
 
 
-def test_search_companies(api_client):
-    _create_company(api_client, ticker="SRCH", legal_name="Searchable Systems Inc")
-    result = api_client.get("/api/v1/companies", params={"q": "searchable"})
+def test_search_companies(auth_client):
+    _create_company(auth_client, ticker="SRCH", legal_name="Searchable Systems Inc")
+    result = auth_client.get("/api/v1/companies", params={"q": "searchable"})
     assert result.status_code == 200
     body = result.json()
     assert body["total"] >= 1
@@ -74,39 +74,39 @@ def _create_document(client, company_id, **overrides):
     return client.post("/api/v1/documents", json=payload)
 
 
-def test_document_lifecycle(api_client):
-    company = _create_company(api_client).json()
+def test_document_lifecycle(auth_client):
+    company = _create_company(auth_client).json()
 
-    created = _create_document(api_client, company["id"])
+    created = _create_document(auth_client, company["id"])
     assert created.status_code == 201, created.text
     document = created.json()
 
-    listing = api_client.get(f"/api/v1/companies/{company['id']}/documents")
+    listing = auth_client.get(f"/api/v1/companies/{company['id']}/documents")
     assert listing.status_code == 200
     assert [d["id"] for d in listing.json()] == [document["id"]]
 
-    fetched = api_client.get(f"/api/v1/documents/{document['id']}")
+    fetched = auth_client.get(f"/api/v1/documents/{document['id']}")
     assert fetched.status_code == 200
 
-    missing = api_client.get("/api/v1/documents/999999")
+    missing = auth_client.get("/api/v1/documents/999999")
     assert missing.status_code == 404
 
 
-def test_document_for_missing_company_404(api_client):
-    response = _create_document(api_client, 555555)
+def test_document_for_missing_company_404(auth_client):
+    response = _create_document(auth_client, 555555)
     assert response.status_code == 404
 
 
-def test_unsupported_document_type_422(api_client):
-    company = _create_company(api_client, ticker="BADD").json()
-    response = _create_document(api_client, company["id"], document_type="Form 999-X")
+def test_unsupported_document_type_422(auth_client):
+    company = _create_company(auth_client, ticker="BADD").json()
+    response = _create_document(auth_client, company["id"], document_type="Form 999-X")
     assert response.status_code == 422
 
 
-def test_invalid_period_dates_422(api_client):
-    company = _create_company(api_client, ticker="DATE").json()
+def test_invalid_period_dates_422(auth_client):
+    company = _create_company(auth_client, ticker="DATE").json()
     response = _create_document(
-        api_client,
+        auth_client,
         company["id"],
         reporting_period_start="2024-12-31",
         reporting_period_end="2024-01-01",
@@ -114,54 +114,54 @@ def test_invalid_period_dates_422(api_client):
     assert response.status_code == 422
 
 
-def test_duplicate_file_hash_409(api_client):
-    company = _create_company(api_client, ticker="HASH").json()
-    first = _create_document(api_client, company["id"], file_hash="cafe1234")
+def test_duplicate_file_hash_409(auth_client):
+    company = _create_company(auth_client, ticker="HASH").json()
+    first = _create_document(auth_client, company["id"], file_hash="cafe1234")
     assert first.status_code == 201
-    second = _create_document(api_client, company["id"], file_hash="cafe1234")
+    second = _create_document(auth_client, company["id"], file_hash="cafe1234")
     assert second.status_code == 409
 
 
 # ── pages / sections / chunks ────────────────────────────────────────────────
 
 
-def test_pages_flow(api_client):
-    company = _create_company(api_client, ticker="PAGS").json()
-    document = _create_document(api_client, company["id"]).json()
+def test_pages_flow(auth_client):
+    company = _create_company(auth_client, ticker="PAGS").json()
+    document = _create_document(auth_client, company["id"]).json()
 
-    page_one = api_client.post(
+    page_one = auth_client.post(
         f"/api/v1/documents/{document['id']}/pages",
         json={"page_number": 1, "raw_text": "Page one text", "extraction_method": "text"},
     )
     assert page_one.status_code == 201
 
-    duplicate = api_client.post(
+    duplicate = auth_client.post(
         f"/api/v1/documents/{document['id']}/pages",
         json={"page_number": 1, "raw_text": "again"},
     )
     assert duplicate.status_code == 409
 
-    invalid = api_client.post(
+    invalid = auth_client.post(
         f"/api/v1/documents/{document['id']}/pages",
         json={"page_number": 0, "raw_text": "zero"},
     )
     assert invalid.status_code == 422
 
-    listed = api_client.get(f"/api/v1/documents/{document['id']}/pages")
+    listed = auth_client.get(f"/api/v1/documents/{document['id']}/pages")
     assert [p["page_number"] for p in listed.json()] == [1]
 
 
-def test_sections_hierarchy(api_client):
-    company = _create_company(api_client, ticker="SECT").json()
-    document = _create_document(api_client, company["id"]).json()
+def test_sections_hierarchy(auth_client):
+    company = _create_company(auth_client, ticker="SECT").json()
+    document = _create_document(auth_client, company["id"]).json()
 
-    parent = api_client.post(
+    parent = auth_client.post(
         f"/api/v1/documents/{document['id']}/sections",
         json={"section_title": "Risk Factors", "section_type": "Risk Factors",
               "page_start": 5, "page_end": 12},
     )
     assert parent.status_code == 201
-    child = api_client.post(
+    child = auth_client.post(
         f"/api/v1/documents/{document['id']}/sections",
         json={"section_title": "Supply Chain Risk", "section_type": "Risk Factors",
               "parent_section_id": parent.json()["id"]},
@@ -169,35 +169,35 @@ def test_sections_hierarchy(api_client):
     assert child.status_code == 201
     assert child.json()["parent_section_id"] == parent.json()["id"]
 
-    bad_parent = api_client.post(
+    bad_parent = auth_client.post(
         f"/api/v1/documents/{document['id']}/sections",
         json={"section_title": "Orphan", "section_type": "Other",
               "parent_section_id": 987654},
     )
     assert bad_parent.status_code == 422
 
-    listed = api_client.get(f"/api/v1/documents/{document['id']}/sections")
+    listed = auth_client.get(f"/api/v1/documents/{document['id']}/sections")
     assert len(listed.json()) == 2
 
 
-def test_chunks_flow(api_client):
-    company = _create_company(api_client, ticker="CHNK").json()
-    document = _create_document(api_client, company["id"]).json()
+def test_chunks_flow(auth_client):
+    company = _create_company(auth_client, ticker="CHNK").json()
+    document = _create_document(auth_client, company["id"]).json()
 
-    chunk = api_client.post(
+    chunk = auth_client.post(
         f"/api/v1/documents/{document['id']}/chunks",
         json={"chunk_index": 0, "text": "Total revenue grew 8%.", "token_count": 6},
     )
     assert chunk.status_code == 201
     assert chunk.json()["chunk_metadata"] == {}
 
-    dup_index = api_client.post(
+    dup_index = auth_client.post(
         f"/api/v1/documents/{document['id']}/chunks",
         json={"chunk_index": 0, "text": "duplicate index"},
     )
     assert dup_index.status_code == 409
 
-    bad_type = api_client.post(
+    bad_type = auth_client.post(
         f"/api/v1/documents/{document['id']}/chunks",
         json={"chunk_index": 1, "text": "x", "chunk_type": "video"},
     )
@@ -207,16 +207,16 @@ def test_chunks_flow(api_client):
 # ── financial metrics (provenance) ───────────────────────────────────────────
 
 
-def test_metrics_flow_with_provenance(api_client):
-    company = _create_company(api_client, ticker="MTRX").json()
-    document = _create_document(api_client, company["id"]).json()
+def test_metrics_flow_with_provenance(auth_client):
+    company = _create_company(auth_client, ticker="MTRX").json()
+    document = _create_document(auth_client, company["id"]).json()
 
-    chunk = api_client.post(
+    chunk = auth_client.post(
         f"/api/v1/documents/{document['id']}/chunks",
         json={"chunk_index": 0, "text": "Net sales increased to $391 billion."},
     ).json()
 
-    metric = api_client.post(
+    metric = auth_client.post(
         f"/api/v1/companies/{company['id']}/metrics",
         json={
             "document_id": document["id"],
@@ -235,23 +235,23 @@ def test_metrics_flow_with_provenance(api_client):
     body = metric.json()
     assert body["normalized_metric_name"] == "revenue"
 
-    by_name = api_client.get(
+    by_name = auth_client.get(
         f"/api/v1/companies/{company['id']}/metrics",
         params={"metric_name": "revenue", "fiscal_year": 2024},
     )
     assert [m["id"] for m in by_name.json()] == [body["id"]]
 
-    single = api_client.get(f"/api/v1/companies/{company['id']}/metrics/{body['id']}")
+    single = auth_client.get(f"/api/v1/companies/{company['id']}/metrics/{body['id']}")
     assert single.status_code == 200
 
-    missing = api_client.get("/api/v1/companies/999999/metrics")
+    missing = auth_client.get("/api/v1/companies/999999/metrics")
     assert missing.status_code == 404
 
 
-def test_metric_without_provenance_422(api_client):
-    company = _create_company(api_client, ticker="NOPR").json()
-    document = _create_document(api_client, company["id"]).json()
-    response = api_client.post(
+def test_metric_without_provenance_422(auth_client):
+    company = _create_company(auth_client, ticker="NOPR").json()
+    document = _create_document(auth_client, company["id"]).json()
+    response = auth_client.post(
         f"/api/v1/companies/{company['id']}/metrics",
         json={
             "document_id": document["id"],
@@ -263,10 +263,10 @@ def test_metric_without_provenance_422(api_client):
     assert "provenance" in response.text.lower()
 
 
-def test_metric_non_finite_value_422(api_client):
-    company = _create_company(api_client, ticker="NANV").json()
-    document = _create_document(api_client, company["id"]).json()
-    response = api_client.post(
+def test_metric_non_finite_value_422(auth_client):
+    company = _create_company(auth_client, ticker="NANV").json()
+    document = _create_document(auth_client, company["id"]).json()
+    response = auth_client.post(
         f"/api/v1/companies/{company['id']}/metrics",
         json={
             "document_id": document["id"],
@@ -278,11 +278,11 @@ def test_metric_non_finite_value_422(api_client):
     assert response.status_code == 422
 
 
-def test_metric_cross_company_document_422(api_client):
-    company_a = _create_company(api_client, ticker="CMPA").json()
-    company_b = _create_company(api_client, ticker="CMPB").json()
-    doc_a = _create_document(api_client, company_a["id"]).json()
-    response = api_client.post(
+def test_metric_cross_company_document_422(auth_client):
+    company_a = _create_company(auth_client, ticker="CMPA").json()
+    company_b = _create_company(auth_client, ticker="CMPB").json()
+    doc_a = _create_document(auth_client, company_a["id"]).json()
+    response = auth_client.post(
         f"/api/v1/companies/{company_b['id']}/metrics",
         json={
             "document_id": doc_a["id"],
@@ -297,9 +297,9 @@ def test_metric_cross_company_document_422(api_client):
 # ── tables ───────────────────────────────────────────────────────────────────
 
 
-def test_table_roundtrip_preserves_structure(api_client):
-    company = _create_company(api_client, ticker="TBLS").json()
-    document = _create_document(api_client, company["id"]).json()
+def test_table_roundtrip_preserves_structure(auth_client):
+    company = _create_company(auth_client, ticker="TBLS").json()
+    document = _create_document(auth_client, company["id"]).json()
 
     table_payload = {
         "title": "Revenue by Geography",
@@ -312,7 +312,7 @@ def test_table_roundtrip_preserves_structure(api_client):
         ],
         "extraction_confidence": 0.95,
     }
-    created = api_client.post(
+    created = auth_client.post(
         f"/api/v1/documents/{document['id']}/tables", json=table_payload
     )
     assert created.status_code == 201, created.text
@@ -320,14 +320,14 @@ def test_table_roundtrip_preserves_structure(api_client):
     assert len(table["rows"]) == 3
     assert table["headers"] == ["Region", "2024", "2025"]
 
-    fetched = api_client.get(
+    fetched = auth_client.get(
         f"/api/v1/documents/{document['id']}/tables/{table['id']}"
     )
     rows = fetched.json()["rows"]
     assert [r["row_label"] for r in rows] == ["Americas", "Europe", "Asia"]
     assert rows[1]["cells"] == ["Europe", "50B", "55B"]
 
-    empty_table = api_client.post(
+    empty_table = auth_client.post(
         f"/api/v1/documents/{document['id']}/tables", json={"title": "Empty"}
     )
     assert empty_table.status_code == 422

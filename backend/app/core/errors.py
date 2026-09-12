@@ -20,3 +20,7 @@ class ConflictError(DomainError):
 
 class ValidationError(DomainError):
     """Business-rule violation beyond what schema validation catches."""
+
+
+class AuthenticationError(DomainError):
+    """Login failed. Message must not reveal whether the email exists."""

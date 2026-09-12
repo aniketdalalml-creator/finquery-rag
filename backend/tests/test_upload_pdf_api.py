@@ -54,9 +54,9 @@ def _minimal_pdf() -> bytes:
     return bytes(out)
 
 
-def test_valid_pdf_uploads(api_client, db_session, company_factory, isolated_storage):
+def test_valid_pdf_uploads(auth_client, db_session, company_factory, isolated_storage):
     company = company_factory("PDFCO")
-    response = api_client.post(
+    response = auth_client.post(
         "/api/v1/documents/upload",
         files={"file": ("report.pdf", _minimal_pdf(), "application/pdf")},
         data={"company_id": str(company.id), "document_type": "10-K"},
@@ -75,8 +75,8 @@ def test_valid_pdf_uploads(api_client, db_session, company_factory, isolated_sto
     assert db_session.get(Document, body["id"]) is not None
 
 
-def test_invalid_file_rejected(api_client, isolated_storage):
-    response = api_client.post(
+def test_invalid_file_rejected(auth_client, isolated_storage):
+    response = auth_client.post(
         "/api/v1/documents/upload",
         files={"file": ("payload.exe", b"MZ-not-a-document", "application/x-msdownload")},
     )
@@ -84,8 +84,8 @@ def test_invalid_file_rejected(api_client, isolated_storage):
     assert "detail" in response.json()
 
 
-def test_empty_file_rejected(api_client, isolated_storage):
-    response = api_client.post(
+def test_empty_file_rejected(auth_client, isolated_storage):
+    response = auth_client.post(
         "/api/v1/documents/upload",
         files={"file": ("empty.pdf", b"", "application/pdf")},
     )
@@ -93,17 +93,17 @@ def test_empty_file_rejected(api_client, isolated_storage):
 
 
 def test_duplicate_content_returns_same_document(
-    api_client, company_factory, isolated_storage
+    auth_client, company_factory, isolated_storage
 ):
     company = company_factory("DUPCO")
     pdf_bytes = _minimal_pdf()
 
-    first = api_client.post(
+    first = auth_client.post(
         "/api/v1/documents/upload",
         files={"file": ("a.pdf", pdf_bytes, "application/pdf")},
         data={"company_id": str(company.id)},
     )
-    second = api_client.post(
+    second = auth_client.post(
         "/api/v1/documents/upload",
         files={"file": ("b.pdf", pdf_bytes, "application/pdf")},
         data={"company_id": str(company.id)},

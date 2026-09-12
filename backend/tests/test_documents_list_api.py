@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 def test_documents_list_returns_rows_with_company_name(
-    api_client, company_factory, document_factory
+    auth_client, company_factory, document_factory
 ):
     company = company_factory("LIST", legal_name="Listed Holdings Inc.")
     document_factory(
@@ -14,7 +14,7 @@ def test_documents_list_returns_rows_with_company_name(
     )
     document_factory(company=None, title="Unassigned Filing")
 
-    response = api_client.get("/api/v1/documents")
+    response = auth_client.get("/api/v1/documents")
 
     assert response.status_code == 200
     body = response.json()
@@ -34,7 +34,7 @@ def test_documents_list_returns_rows_with_company_name(
     }
 
 
-def test_documents_list_empty(api_client):
-    response = api_client.get("/api/v1/documents")
+def test_documents_list_empty(auth_client):
+    response = auth_client.get("/api/v1/documents")
     assert response.status_code == 200
     assert response.json() == []

@@ -1,5 +1,5 @@
-# FinQuery RAG — pins chosen so Python 3.13 on Windows can use **wheels only**
-# (LangChain 0.1.x required numpy<2 → no numpy 1.26 wheel for cp313 → MSVC build failure.)
+﻿# FinQuery RAG â€” pins chosen so Python 3.13 on Windows can use **wheels only**
+# (LangChain 0.1.x required numpy<2 â†’ no numpy 1.26 wheel for cp313 â†’ MSVC build failure.)
 
 fastapi==0.115.6
 uvicorn==0.27.1
@@ -8,7 +8,6 @@ streamlit==1.43.2
 pydantic==2.11.10
 email-validator>=2.2,<3
 python-dotenv==1.0.1
-PyJWT>=2.9,<3
 
 # Finance data layer (SQLAlchemy 2.x + Alembic migrations)
 sqlalchemy>=2.0,<2.1

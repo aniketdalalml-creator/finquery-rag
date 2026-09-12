@@ -23,7 +23,7 @@ def patch_service(monkeypatch, service):
     )
 
 
-def test_successful_question(api_client, monkeypatch):
+def test_successful_question(auth_client, monkeypatch):
     stub = StubService(
         result={
             "answer": "Total net sales were $391,035 million.",
@@ -39,7 +39,7 @@ def test_successful_question(api_client, monkeypatch):
     )
     patch_service(monkeypatch, stub)
 
-    response = api_client.post(
+    response = auth_client.post(
         "/api/v1/rag/query", json={"question": "What was revenue?"}
     )
 
@@ -52,11 +52,11 @@ def test_successful_question(api_client, monkeypatch):
     assert stub.calls == ["What was revenue?"]
 
 
-def test_no_relevant_results_returns_fallback(api_client, monkeypatch):
+def test_no_relevant_results_returns_fallback(auth_client, monkeypatch):
     stub = StubService(result={"answer": FALLBACK_ANSWER, "sources": []})
     patch_service(monkeypatch, stub)
 
-    response = api_client.post(
+    response = auth_client.post(
         "/api/v1/rag/query", json={"question": "Quantum earnings?"}
     )
 
@@ -67,7 +67,7 @@ def test_no_relevant_results_returns_fallback(api_client, monkeypatch):
     assert response.json()["sources"] == []
 
 
-def test_llm_failure_maps_to_fallback_answer(api_client, monkeypatch):
+def test_llm_failure_maps_to_fallback_answer(auth_client, monkeypatch):
     from app.services.rag_service import RagAnswerService as _Real
 
     class LlmFailService(_Real):
@@ -112,7 +112,7 @@ def test_llm_failure_maps_to_fallback_answer(api_client, monkeypatch):
 
     monkeypatch.setattr(rag_routes_module, "RagAnswerService", LlmFailService)
 
-    response = api_client.post(
+    response = auth_client.post(
         "/api/v1/rag/query", json={"question": "Any revenue figures?"}
     )
 
@@ -120,7 +120,7 @@ def test_llm_failure_maps_to_fallback_answer(api_client, monkeypatch):
     assert response.json()["answer"] == FALLBACK_ANSWER
 
 
-def test_source_metadata_shape(api_client, monkeypatch):
+def test_source_metadata_shape(auth_client, monkeypatch):
     stub = StubService(
         result={
             "answer": "a",
@@ -131,14 +131,14 @@ def test_source_metadata_shape(api_client, monkeypatch):
     )
     patch_service(monkeypatch, stub)
 
-    body = api_client.post(
+    body = auth_client.post(
         "/api/v1/rag/query", json={"question": "q"}
     ).json()
 
     assert set(body["sources"][0]) == {"document_id", "page_start", "page_end", "score"}
 
 
-def test_empty_question_rejected_with_422(api_client, monkeypatch):
+def test_empty_question_rejected_with_422(auth_client, monkeypatch):
     # {} and "" fail schema validation; "   " must be rejected by the real
     # service (ValidationError → 422), so use the real service with fakes.
     from types import SimpleNamespace
@@ -165,5 +165,5 @@ def test_empty_question_rejected_with_422(api_client, monkeypatch):
     )
 
     for payload in ({}, {"question": ""}, {"question": "   "}):
-        response = api_client.post("/api/v1/rag/query", json=payload)
+        response = auth_client.post("/api/v1/rag/query", json=payload)
         assert response.status_code == 422

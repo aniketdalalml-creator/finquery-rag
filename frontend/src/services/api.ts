@@ -1,26 +1,54 @@
 import type {
+  AuthUser,
   CompanyOption,
   DashboardStats,
   DocumentListItem,
   DocumentPageItem,
+  LoginResponse,
   RagAnswer,
   DocumentStatus,
   HealthResponse,
   UploadedDocument,
 } from '../types/api'
+import { clearSession, getStoredToken } from '../auth/session'
 
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ||
   '/api'
 
+let onUnauthorized: (() => void) | null = null
+
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  onUnauthorized = handler
+}
+
 async function parseErrorDetail(res: Response): Promise<string> {
   try {
     const data = (await res.clone().json()) as { detail?: unknown }
     if (typeof data.detail === 'string') return data.detail
+    if (Array.isArray(data.detail)) {
+      const first = data.detail[0] as { msg?: string } | undefined
+      if (first?.msg) return first.msg
+    }
   } catch {
     /* not JSON */
   }
   return `Request failed with status ${res.status}`
+}
+
+async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers)
+  const token = getStoredToken()
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+  const res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers })
+  const isAuthPath = path.startsWith('/v1/auth/')
+  if (res.status === 401 && !isAuthPath) {
+    clearSession()
+    onUnauthorized?.()
+  }
+  return res
 }
 
 export async function getHealth(): Promise<HealthResponse> {
@@ -31,8 +59,32 @@ export async function getHealth(): Promise<HealthResponse> {
   return res.json() as Promise<HealthResponse>
 }
 
+export async function register(email: string, password: string): Promise<AuthUser> {
+  const res = await apiFetch('/v1/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  })
+  if (!res.ok) {
+    throw new Error(await parseErrorDetail(res))
+  }
+  return res.json() as Promise<AuthUser>
+}
+
+export async function login(email: string, password: string): Promise<LoginResponse> {
+  const res = await apiFetch('/v1/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  })
+  if (!res.ok) {
+    throw new Error(await parseErrorDetail(res))
+  }
+  return res.json() as Promise<LoginResponse>
+}
+
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const res = await fetch(`${API_BASE_URL}/stats/dashboard`)
+  const res = await apiFetch('/v1/stats/dashboard')
   if (!res.ok) {
     throw new Error(`Dashboard stats failed with status ${res.status}`)
   }
@@ -40,7 +92,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 }
 
 export async function listCompanies(): Promise<CompanyOption[]> {
-  const res = await fetch(`${API_BASE_URL}/v1/companies?limit=100`)
+  const res = await apiFetch('/v1/companies?limit=100')
   if (!res.ok) {
     throw new Error(await parseErrorDetail(res))
   }
@@ -49,7 +101,7 @@ export async function listCompanies(): Promise<CompanyOption[]> {
 }
 
 export async function listDocuments(): Promise<DocumentListItem[]> {
-  const res = await fetch(`${API_BASE_URL}/v1/documents`)
+  const res = await apiFetch('/v1/documents')
   if (!res.ok) {
     throw new Error(await parseErrorDetail(res))
   }
@@ -57,7 +109,7 @@ export async function listDocuments(): Promise<DocumentListItem[]> {
 }
 
 export async function processDocument(documentId: number): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/v1/documents/${documentId}/process`, {
+  const res = await apiFetch(`/v1/documents/${documentId}/process`, {
     method: 'POST',
   })
   if (!res.ok) {
@@ -68,7 +120,7 @@ export async function processDocument(documentId: number): Promise<void> {
 export async function getDocumentStatus(
   documentId: number,
 ): Promise<DocumentStatus> {
-  const res = await fetch(`${API_BASE_URL}/v1/documents/${documentId}/status`)
+  const res = await apiFetch(`/v1/documents/${documentId}/status`)
   if (!res.ok) {
     throw new Error(await parseErrorDetail(res))
   }
@@ -78,7 +130,7 @@ export async function getDocumentStatus(
 export async function getDocumentPages(
   documentId: number,
 ): Promise<DocumentPageItem[]> {
-  const res = await fetch(`${API_BASE_URL}/v1/documents/${documentId}/pages`)
+  const res = await apiFetch(`/v1/documents/${documentId}/pages`)
   if (!res.ok) {
     throw new Error(await parseErrorDetail(res))
   }
@@ -86,7 +138,7 @@ export async function getDocumentPages(
 }
 
 export async function askQuestion(question: string): Promise<RagAnswer> {
-  const res = await fetch(`${API_BASE_URL}/v1/rag/query`, {
+  const res = await apiFetch('/v1/rag/query', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ question }),
@@ -107,7 +159,7 @@ export async function uploadDocument(
     form.append('company_id', String(options.companyId))
   }
   form.append('document_type', options.documentType ?? 'Other')
-  const res = await fetch(`${API_BASE_URL}/v1/documents/upload`, {
+  const res = await apiFetch('/v1/documents/upload', {
     method: 'POST',
     body: form,
   })

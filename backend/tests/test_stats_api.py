@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 
-def test_dashboard_stats_counts(api_client, db_session, company_factory, document_factory):
+def test_dashboard_stats_counts(auth_client, db_session, company_factory, document_factory):
     from app.models.metric import FinancialMetric
 
     company = company_factory("STTS")
@@ -20,7 +20,7 @@ def test_dashboard_stats_counts(api_client, db_session, company_factory, documen
     )
     db_session.flush()
 
-    response = api_client.get("/api/v1/stats/dashboard")
+    response = auth_client.get("/api/v1/stats/dashboard")
 
     assert response.status_code == 200
     body = response.json()
@@ -31,9 +31,9 @@ def test_dashboard_stats_counts(api_client, db_session, company_factory, documen
     assert body["financial_metrics"] >= 1
 
 
-def test_dashboard_stats_empty_database(api_client):
+def test_dashboard_stats_empty_database(auth_client):
     # Rolled-back scratch DB starts empty; endpoint must still answer.
-    response = api_client.get("/api/v1/stats/dashboard")
+    response = auth_client.get("/api/v1/stats/dashboard")
     assert response.status_code == 200
     body = response.json()
     assert body["documents"] == 0

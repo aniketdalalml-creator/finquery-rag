@@ -18,7 +18,13 @@ from fastapi.responses import JSONResponse
 from app.api.router import api_router
 from app.api.v1 import v1_router
 from app.core.config import config
-from app.core.errors import ConflictError, DomainError, NotFoundError, ValidationError
+from app.core.errors import (
+    AuthenticationError,
+    ConflictError,
+    DomainError,
+    NotFoundError,
+    ValidationError,
+)
 from app.services.chat import ChatService
 import app.state as state
 
@@ -97,3 +103,8 @@ async def _conflict_handler(request: Request, exc: ConflictError):
 @app.exception_handler(ValidationError)
 async def _validation_handler(request: Request, exc: ValidationError):
     return _domain_error_response(request, exc, 422)
+
+
+@app.exception_handler(AuthenticationError)
+async def _authentication_handler(request: Request, exc: AuthenticationError):
+    return _domain_error_response(request, exc, 401)
