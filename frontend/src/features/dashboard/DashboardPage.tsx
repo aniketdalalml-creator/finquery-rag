@@ -3,25 +3,33 @@ import { ArrowUpRight } from 'lucide-react'
 import { DashboardSidebar } from './components/DashboardSidebar'
 import { DashboardHeader } from './components/DashboardHeader'
 import type { NavItemId } from './navigation'
-import { MOCK_RECENT_DOCUMENTS, type RecentDocument } from './mockData'
 import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useDashboardStats } from '../../hooks/useDashboardStats'
+import { useDocuments } from '../../hooks/useDocuments'
 import { askQuestion } from '../../services/api'
-import type { RagAnswer } from '../../types/api'
+import type { DocumentListItem, RagAnswer } from '../../types/api'
 import DocumentsPage from '../documents/DocumentsPage'
 import CompaniesPage from '../companies/CompaniesPage'
+import SettingsPage from '../settings/SettingsPage'
+import { StatusBadge } from '../documents/components/StatusBadge'
 
-const PAGE_TITLES: Record<NavItemId, string> = {
-  dashboard: 'Financial Intelligence',
-  documents: 'Documents',
-  companies: 'Companies',
-  settings: 'Settings',
+const RECENT_DOCUMENTS_LIMIT = 5
+
+function formatUploadedAt(value: string): string {
+  return new Date(value).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
 }
 
-const STATUS_STYLES: Record<RecentDocument['status'], string> = {
-  Processed: 'bg-primary-container text-on-primary-container',
-  Processing: 'bg-secondary-container text-on-secondary-container',
-  Failed: 'bg-error-container text-on-error-container',
+function recentDocuments(documents: DocumentListItem[]): DocumentListItem[] {
+  return [...documents]
+    .sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    )
+    .slice(0, RECENT_DOCUMENTS_LIMIT)
 }
 
 function StatCard({
@@ -44,17 +52,6 @@ function StatCard({
   )
 }
 
-function PlaceholderView({ title }: { title: string }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-outline-variant bg-surface-container-low p-12 text-center">
-      <p className="text-headline-md text-on-surface">{title}</p>
-      <p className="mt-2 text-body-md text-on-surface-variant/70">
-        This area will be built in an upcoming milestone.
-      </p>
-    </div>
-  )
-}
-
 function formatCount(n: number): string {
   return n.toLocaleString('en-US')
 }
@@ -67,6 +64,8 @@ export default function DashboardPage() {
   const [askError, setAskError] = useState<string | null>(null)
   const backendStatus = useBackendHealth()
   const { status: statsStatus, stats } = useDashboardStats()
+  const { status: documentsStatus, documents } = useDocuments(0)
+  const recent = recentDocuments(documents)
 
   async function handleAsk(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -110,6 +109,8 @@ export default function DashboardPage() {
             <DocumentsPage />
           ) : active === 'companies' ? (
             <CompaniesPage />
+          ) : active === 'settings' ? (
+            <SettingsPage />
           ) : active === 'dashboard' ? (
             <div className="mx-auto max-w-5xl space-y-10">
               <div>
@@ -207,76 +208,104 @@ export default function DashboardPage() {
               </section>
 
               <section aria-label="Recent documents">
-                <h2 className="text-headline-md tracking-tight text-on-surface">
-                  Recent Documents
-                </h2>
+                <div className="flex items-end justify-between gap-4">
+                  <h2 className="text-headline-md tracking-tight text-on-surface">
+                    Recent Documents
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setActive('documents')}
+                    className="text-label-sm font-semibold text-on-primary-container hover:underline"
+                  >
+                    View all
+                  </button>
+                </div>
                 <div className="mt-4 overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="border-b border-outline-variant bg-surface-container-low">
-                        <th className="px-6 py-3 text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
-                          Document
-                        </th>
-                        <th className="px-6 py-3 text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
-                          Company
-                        </th>
-                        <th className="px-6 py-3 text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
-                          Type
-                        </th>
-                        <th className="px-6 py-3 text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
-                          Uploaded
-                        </th>
-                        <th className="px-6 py-3 text-right text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {MOCK_RECENT_DOCUMENTS.map((doc) => (
-                        <tr
-                          key={doc.id}
-                          className="border-b border-outline-variant/60 last:border-b-0 hover:bg-surface-container-low"
-                        >
-                          <td className="px-6 py-4">
-                            <span className="flex items-center gap-2 text-body-md font-medium text-on-surface">
-                              {doc.title}
-                              <ArrowUpRight
-                                size={14}
-                                className="text-on-surface-variant/50"
-                              />
-                            </span>
-                            <span className="text-label-sm text-on-surface-variant/70">
-                              FY{doc.fiscalYear}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-body-md text-on-surface-variant">
-                            {doc.company}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="rounded-lg bg-secondary-container px-2.5 py-1 text-label-sm font-semibold text-on-secondary-container">
-                              {doc.documentType}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-data-tabular text-on-surface-variant">
-                            {doc.uploadedAt}
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <span
-                              className={`inline-block rounded-full px-3 py-1 text-label-sm font-semibold ${STATUS_STYLES[doc.status]}`}
-                            >
-                              {doc.status}
-                            </span>
-                          </td>
+                  {documentsStatus === 'loading' ? (
+                    <p className="p-10 text-center text-body-md text-on-surface-variant">
+                      Loading documents…
+                    </p>
+                  ) : documentsStatus === 'error' ? (
+                    <p
+                      role="alert"
+                      className="p-10 text-center text-body-md text-on-error-container"
+                    >
+                      Could not load documents. Check that the backend is running.
+                    </p>
+                  ) : recent.length === 0 ? (
+                    <div className="p-10 text-center">
+                      <p className="text-headline-md text-on-surface">No documents yet</p>
+                      <p className="mt-2 text-body-md text-on-surface-variant/70">
+                        Upload a filing from Documents to see it here.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setActive('documents')}
+                        className="mt-4 rounded-xl bg-[#006d38] px-6 py-2.5 text-body-md font-semibold text-on-primary hover:bg-[#005c2f]"
+                      >
+                        Go to Documents
+                      </button>
+                    </div>
+                  ) : (
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="border-b border-outline-variant bg-surface-container-low">
+                          <th className="px-6 py-3 text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
+                            Document
+                          </th>
+                          <th className="px-6 py-3 text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
+                            Company
+                          </th>
+                          <th className="px-6 py-3 text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
+                            Type
+                          </th>
+                          <th className="px-6 py-3 text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
+                            Uploaded
+                          </th>
+                          <th className="px-6 py-3 text-right text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">
+                            Status
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {recent.map((doc) => (
+                          <tr
+                            key={doc.id}
+                            className="cursor-pointer border-b border-outline-variant/60 last:border-b-0 hover:bg-surface-container-low"
+                            onClick={() => setActive('documents')}
+                          >
+                            <td className="px-6 py-4">
+                              <span className="flex items-center gap-2 text-body-md font-medium text-on-surface">
+                                {doc.title}
+                                <ArrowUpRight
+                                  size={14}
+                                  className="shrink-0 text-on-surface-variant/50"
+                                />
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-body-md text-on-surface-variant">
+                              {doc.company_name ?? '—'}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="rounded-lg bg-secondary-container px-2.5 py-1 text-label-sm font-semibold text-on-secondary-container">
+                                {doc.document_type}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-data-tabular text-on-surface-variant">
+                              {formatUploadedAt(doc.created_at)}
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <StatusBadge status={doc.processing_status} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </section>
             </div>
-          ) : (
-            <PlaceholderView title={PAGE_TITLES[active]} />
-          )}
+          ) : null}
         </main>
       </div>
     </div>

@@ -1,5 +1,11 @@
 export interface HealthResponse {
   status: string
+  pipeline_ready?: boolean
+  total_chunks?: number
+  llm_model?: string
+  groq_configured?: boolean
+  jina_configured?: boolean
+  chat_mode?: string
 }
 
 export interface AuthUser {
