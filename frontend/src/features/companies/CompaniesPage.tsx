@@ -126,8 +126,16 @@ export default function CompaniesPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <div>
-        <h1 className="text-display-lg tracking-tight text-on-surface">Companies</h1>
-        <p className="mt-3 max-w-2xl text-body-lg text-on-surface-variant">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+          <span className="text-label-sm uppercase tracking-wider text-secondary">
+            Coverage Universe
+          </span>
+        </div>
+        <h1 className="mt-1 text-headline-lg font-bold tracking-tight text-on-surface">
+          Companies
+        </h1>
+        <p className="mt-2 max-w-2xl text-body-md text-on-surface-variant">
           Manage company master data used when uploading and organizing filings.
         </p>
       </div>
@@ -143,7 +151,7 @@ export default function CompaniesPage() {
 
       <form
         onSubmit={handleCreate}
-        className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6"
+        className="rounded-2xl bg-surface-container-lowest p-6 shadow-[var(--shadow-card)]"
       >
         <h2 className="text-headline-md tracking-tight text-on-surface">Add company</h2>
         <p className="mt-1 text-body-md text-on-surface-variant/80">
@@ -244,7 +252,7 @@ export default function CompaniesPage() {
         <button
           type="submit"
           disabled={submitting || !form.legal_name.trim()}
-          className="mt-6 rounded-xl bg-[#006d38] px-8 py-3 text-body-md font-semibold text-on-primary transition-colors hover:bg-[#005c2f] disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-6 rounded-xl bg-primary px-8 py-3 text-body-md font-semibold text-on-primary transition-colors hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? 'Saving…' : 'Create company'}
         </button>
@@ -389,7 +397,7 @@ export default function CompaniesPage() {
                                 type="button"
                                 disabled={savingId === company.id}
                                 onClick={() => void saveEdit(company.id)}
-                                className="rounded-lg bg-[#006d38] px-3 py-1.5 text-label-sm font-semibold text-on-primary disabled:opacity-50"
+                                className="rounded-lg bg-primary px-3 py-1.5 text-label-sm font-semibold text-on-primary disabled:opacity-50"
                               >
                                 {savingId === company.id ? 'Saving…' : 'Save'}
                               </button>

@@ -1,31 +1,31 @@
 const STATUS_BADGES: Record<string, { label: string; className: string }> = {
   uploaded: {
     label: 'Uploaded',
-    className: 'bg-secondary-container text-on-secondary-container',
+    className: 'bg-warning-container text-warning',
   },
   queued: {
     label: 'Processing',
-    className: 'bg-[#fff3cd] text-[#7a5b00]',
+    className: 'bg-warning-container text-warning',
   },
   pending: {
     label: 'Processing',
-    className: 'bg-[#fff3cd] text-[#7a5b00]',
+    className: 'bg-warning-container text-warning',
   },
   processing: {
     label: 'Processing',
-    className: 'bg-[#fff3cd] text-[#7a5b00]',
+    className: 'bg-warning-container text-warning',
   },
   partially_processed: {
     label: 'Processing',
-    className: 'bg-[#fff3cd] text-[#7a5b00]',
+    className: 'bg-warning-container text-warning',
   },
   processed: {
-    label: 'Processed',
-    className: 'bg-primary-container text-on-primary-container',
+    label: 'Ready',
+    className: 'bg-success-container text-success',
   },
   completed: {
-    label: 'Processed',
-    className: 'bg-primary-container text-on-primary-container',
+    label: 'Ready',
+    className: 'bg-success-container text-success',
   },
   failed: {
     label: 'Failed',
@@ -40,7 +40,7 @@ export function StatusBadge({ status }: { status: string }) {
   }
   return (
     <span
-      className={`inline-block rounded-full px-3 py-1 text-label-sm font-semibold ${badge.className}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-label-sm font-semibold ${badge.className}`}
     >
       {badge.label}
     </span>

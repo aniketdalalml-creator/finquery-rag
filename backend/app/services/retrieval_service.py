@@ -45,8 +45,9 @@ class VectorRetriever:
         query_embedding: list[float],
         top_k: int | None = None,
         document_id: int | None = None,
+        document_ids: list[int] | None = None,
     ) -> list[RetrievedChunk]:
-        """Return the top_k most similar chunks, optionally scoped to a doc.
+        """Return the top_k most similar chunks, optionally scoped to docs.
 
         Retrieval failures degrade to an empty result set instead of
         raising — callers answer "not enough information" rather than 500.
@@ -55,6 +56,8 @@ class VectorRetriever:
         if limit < 1:
             raise ValueError("top_k must be >= 1")
         if not query_embedding:
+            return []
+        if document_ids is not None and len(document_ids) == 0:
             return []
         try:
             from qdrant_client import models as qm
@@ -66,6 +69,15 @@ class VectorRetriever:
                         qm.FieldCondition(
                             key="document_id",
                             match=qm.MatchValue(value=document_id),
+                        )
+                    ]
+                )
+            elif document_ids is not None:
+                query_filter = qm.Filter(
+                    must=[
+                        qm.FieldCondition(
+                            key="document_id",
+                            match=qm.MatchAny(any=list(document_ids)),
                         )
                     ]
                 )

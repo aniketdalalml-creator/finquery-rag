@@ -14,15 +14,15 @@ export function Logo({ className = '', size = 32 }: LogoProps) {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden
     >
-      <rect width="32" height="32" rx="8" fill="#4AFF94" />
+      <rect width="32" height="32" rx="8" fill="#2563EB" />
       <path
         d="M8 10h10a4 4 0 0 1 0 8H12v4H8V10zm4 3v2h6a1 1 0 0 0 0-2h-6z"
-        fill="#00210D"
+        fill="#FFFFFF"
       />
-      <circle cx="22" cy="22" r="5" stroke="#00210D" strokeWidth="2" fill="none" />
+      <circle cx="22" cy="22" r="5" stroke="#FFFFFF" strokeWidth="2" fill="none" />
       <path
         d="M25.5 25.5L28 28"
-        stroke="#00210D"
+        stroke="#FFFFFF"
         strokeWidth="2"
         strokeLinecap="round"
       />

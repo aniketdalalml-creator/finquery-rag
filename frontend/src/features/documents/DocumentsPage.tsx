@@ -26,10 +26,16 @@ export default function DocumentsPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <div>
-        <h1 className="text-display-lg tracking-tight text-on-surface">
-          Documents
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+          <span className="text-label-sm uppercase tracking-wider text-secondary">
+            Filings &amp; Transcripts
+          </span>
+        </div>
+        <h1 className="mt-1 text-headline-lg font-bold tracking-tight text-on-surface">
+          Document Library
         </h1>
-        <p className="mt-3 max-w-2xl text-body-lg text-on-surface-variant">
+        <p className="mt-2 max-w-2xl text-body-md text-on-surface-variant">
           Upload filings and manage your document library.
         </p>
       </div>

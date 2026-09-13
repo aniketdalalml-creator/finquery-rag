@@ -32,6 +32,7 @@ class IngestionService:
     def upload_document(
         self,
         *,
+        user_id: int,
         filename: str,
         data: bytes,
         storage: DocumentStorageService,
@@ -61,7 +62,7 @@ class IngestionService:
         import hashlib
 
         file_hash = hashlib.sha256(data).hexdigest()
-        existing = self.documents.get_by_file_hash(company_id, file_hash)
+        existing = self.documents.get_by_file_hash(user_id, company_id, file_hash)
         if existing is not None:
             return existing, True
 
@@ -69,6 +70,7 @@ class IngestionService:
             company_id, filename, data
         )
         document = self.document_service.create_document_from_upload(
+            user_id=user_id,
             company_id=company_id,
             document_type=document_type,
             title=title or filename.rsplit("/", 1)[-1],
@@ -85,8 +87,8 @@ class IngestionService:
         )
         return document, False
 
-    def mark_queued(self, document_id: int) -> Document:
-        document = self.documents.get(document_id)
+    def mark_queued(self, user_id: int, document_id: int) -> Document:
+        document = self.documents.get_for_user(document_id, user_id)
         if document is None:
             raise NotFoundError("Document", document_id)
         if document.processing_status == "processing":

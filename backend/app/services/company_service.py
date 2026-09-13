@@ -15,20 +15,20 @@ class CompanyService:
         self.session = session
         self.companies = CompanyRepository(session)
 
-    def create_company(self, payload: CompanyCreate) -> Company:
+    def create_company(self, user_id: int, payload: CompanyCreate) -> Company:
         legal_name = payload.legal_name.strip()
         ticker = payload.ticker.strip().upper() if payload.ticker else None
 
         if ticker is not None:
             existing = self.companies.get_by_ticker_and_exchange(
-                ticker, payload.exchange
+                user_id, ticker, payload.exchange
             )
             if existing is not None:
                 raise ConflictError(
                     f"Company with ticker {ticker!r} already exists "
                     f"(id={existing.id})"
                 )
-        existing = self.companies.get_by_legal_name(legal_name)
+        existing = self.companies.get_by_legal_name(user_id, legal_name)
         if existing is not None:
             raise ConflictError(
                 f"Company with legal_name {legal_name!r} already exists "
@@ -36,6 +36,7 @@ class CompanyService:
             )
 
         company = Company(
+            user_id=user_id,
             legal_name=legal_name,
             display_name=(payload.display_name or legal_name).strip(),
             ticker=ticker,
@@ -46,23 +47,31 @@ class CompanyService:
         )
         return self.companies.add(company)
 
-    def get_company(self, company_id: int) -> Company:
-        company = self.companies.get(company_id)
+    def get_company(self, user_id: int, company_id: int) -> Company:
+        company = self.companies.get_for_user(company_id, user_id)
         if company is None:
             raise NotFoundError("Company", company_id)
         return company
 
     def list_companies(
-        self, query: str | None = None, limit: int = 50, offset: int = 0
+        self,
+        user_id: int,
+        query: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
     ) -> tuple[list[Company], int]:
         limit = max(1, min(limit, 200))
         offset = max(0, offset)
-        items = self.companies.search(query=query, limit=limit, offset=offset)
-        total = self.companies.count(query=query)
+        items = self.companies.search(
+            user_id, query=query, limit=limit, offset=offset
+        )
+        total = self.companies.count(user_id, query=query)
         return items, total
 
-    def update_company(self, company_id: int, payload: CompanyUpdate) -> Company:
-        company = self.get_company(company_id)
+    def update_company(
+        self, user_id: int, company_id: int, payload: CompanyUpdate
+    ) -> Company:
+        company = self.get_company(user_id, company_id)
         data = payload.model_dump(exclude_unset=True)
         if "country" in data and data["country"]:
             data["country"] = data["country"].upper()

@@ -17,8 +17,8 @@ function Row({
         className={`text-right text-body-md font-medium ${
           ok === false
             ? 'text-error'
-            : ok === true
-              ? 'text-on-primary-container'
+            :           ok === true
+              ? 'text-success'
               : 'text-on-surface'
         }`}
       >
@@ -47,15 +47,23 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <h1 className="text-display-lg tracking-tight text-on-surface">Settings</h1>
-        <p className="mt-3 max-w-2xl text-body-lg text-on-surface-variant">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+          <span className="text-label-sm uppercase tracking-wider text-secondary">
+            Workspace
+          </span>
+        </div>
+        <h1 className="mt-1 text-headline-lg font-bold tracking-tight text-on-surface">
+          Settings
+        </h1>
+        <p className="mt-2 max-w-2xl text-body-md text-on-surface-variant">
           Account, backend health, and session controls for FinanceIQ.
         </p>
       </div>
 
       <section
         aria-label="Account"
-        className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6"
+        className="rounded-2xl bg-surface-container-lowest p-6 shadow-[var(--shadow-card)]"
       >
         <h2 className="text-headline-md tracking-tight text-on-surface">Account</h2>
         <p className="mt-1 text-body-md text-on-surface-variant/80">
@@ -81,7 +89,7 @@ export default function SettingsPage() {
 
       <section
         aria-label="System status"
-        className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6"
+        className="rounded-2xl bg-surface-container-lowest p-6 shadow-[var(--shadow-card)]"
       >
         <h2 className="text-headline-md tracking-tight text-on-surface">System</h2>
         <p className="mt-1 text-body-md text-on-surface-variant/80">
@@ -132,7 +140,7 @@ export default function SettingsPage() {
         <button
           type="button"
           onClick={refresh}
-          className="mt-6 rounded-xl bg-[#006d38] px-6 py-2.5 text-body-md font-semibold text-on-primary hover:bg-[#005c2f]"
+          className="mt-6 rounded-xl bg-primary px-6 py-2.5 text-body-md font-semibold text-on-primary hover:bg-primary-container"
         >
           Refresh status
         </button>
@@ -140,7 +148,7 @@ export default function SettingsPage() {
 
       <section
         aria-label="About"
-        className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6"
+        className="rounded-2xl bg-surface-container-lowest p-6 shadow-[var(--shadow-card)]"
       >
         <h2 className="text-headline-md tracking-tight text-on-surface">About</h2>
         <div className="mt-4">

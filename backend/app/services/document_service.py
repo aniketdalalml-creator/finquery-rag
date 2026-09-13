@@ -37,18 +37,16 @@ class DocumentService:
 
     # ── documents ────────────────────────────────────────────────
 
-    def list_documents(self, limit: int = 50) -> list[Document]:
-        return self.documents.list_all(limit=limit)
+    def list_documents(self, user_id: int, limit: int = 50) -> list[Document]:
+        return self.documents.list_all(user_id, limit=limit)
 
-    def create_document(self, payload: DocumentCreate) -> Document:
-        if payload.company_id is not None and (
-            self.companies.get(payload.company_id) is None
-        ):
-            raise NotFoundError("Company", payload.company_id)
+    def create_document(self, user_id: int, payload: DocumentCreate) -> Document:
+        if payload.company_id is not None:
+            self._ensure_company(user_id, payload.company_id)
 
         if payload.file_hash:
             duplicate = self.documents.get_by_file_hash(
-                payload.company_id, payload.file_hash
+                user_id, payload.company_id, payload.file_hash
             )
             if duplicate is not None:
                 raise ConflictError(
@@ -56,12 +54,13 @@ class DocumentService:
                     f"exists (id={duplicate.id})"
                 )
 
-        document = Document(**payload.model_dump())
+        document = Document(user_id=user_id, **payload.model_dump())
         return self.documents.add(document)
 
     def create_document_from_upload(
         self,
         *,
+        user_id: int,
         company_id: int | None,
         document_type: str,
         title: str,
@@ -71,9 +70,10 @@ class DocumentService:
         file_hash: str,
     ) -> Document:
         """Create a record for an uploaded file (validation already done)."""
-        if company_id is not None and self.companies.get(company_id) is None:
-            raise NotFoundError("Company", company_id)
+        if company_id is not None:
+            self._ensure_company(user_id, company_id)
         document = Document(
+            user_id=user_id,
             company_id=company_id,
             document_type=document_type if document_type in C.DOCUMENT_TYPES else "Other",
             title=title[:512],
@@ -85,22 +85,24 @@ class DocumentService:
         )
         return self.documents.add(document)
 
-    def get_document(self, document_id: int) -> Document:
-        document = self.documents.get(document_id)
+    def get_document(self, user_id: int, document_id: int) -> Document:
+        document = self.documents.get_for_user(document_id, user_id)
         if document is None:
             raise NotFoundError("Document", document_id)
         return document
 
     def list_documents_for_company(
         self,
+        user_id: int,
         company_id: int,
         document_type: str | None = None,
         fiscal_year: int | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[Document]:
-        self._ensure_company(company_id)
+        self._ensure_company(user_id, company_id)
         return self.documents.list_by_company(
+            user_id,
             company_id,
             document_type=document_type,
             fiscal_year=fiscal_year,
@@ -110,8 +112,10 @@ class DocumentService:
 
     # ── pages ────────────────────────────────────────────────────
 
-    def add_page(self, document_id: int, payload: DocumentPageCreate) -> DocumentPage:
-        self.get_document(document_id)
+    def add_page(
+        self, user_id: int, document_id: int, payload: DocumentPageCreate
+    ) -> DocumentPage:
+        self.get_document(user_id, document_id)
         if self.pages.get_by_number(document_id, payload.page_number) is not None:
             raise ConflictError(
                 f"Page {payload.page_number} already exists for document {document_id}"
@@ -119,16 +123,16 @@ class DocumentService:
         page = DocumentPage(document_id=document_id, **payload.model_dump())
         return self.pages.add(page)
 
-    def list_pages(self, document_id: int) -> list[DocumentPage]:
-        self.get_document(document_id)
+    def list_pages(self, user_id: int, document_id: int) -> list[DocumentPage]:
+        self.get_document(user_id, document_id)
         return self.pages.list_for_document(document_id)
 
     # ── sections ─────────────────────────────────────────────────
 
     def add_section(
-        self, document_id: int, payload: DocumentSectionCreate
+        self, user_id: int, document_id: int, payload: DocumentSectionCreate
     ) -> DocumentSection:
-        self.get_document(document_id)
+        self.get_document(user_id, document_id)
         data = payload.model_dump()
         parent_id = data.pop("parent_section_id")
         if parent_id is not None:
@@ -143,16 +147,16 @@ class DocumentService:
         )
         return self.sections.add(section)
 
-    def list_sections(self, document_id: int) -> list[DocumentSection]:
-        self.get_document(document_id)
+    def list_sections(self, user_id: int, document_id: int) -> list[DocumentSection]:
+        self.get_document(user_id, document_id)
         return self.sections.list_for_document(document_id)
 
     # ── chunks ───────────────────────────────────────────────────
 
     def add_chunk(
-        self, document_id: int, payload: DocumentChunkCreate
+        self, user_id: int, document_id: int, payload: DocumentChunkCreate
     ) -> DocumentChunk:
-        self.get_document(document_id)
+        self.get_document(user_id, document_id)
         if payload.section_id is not None:
             section = self.sections.get(payload.section_id)
             if section is None or section.document_id != document_id:
@@ -168,14 +172,16 @@ class DocumentService:
         chunk = DocumentChunk(document_id=document_id, **payload.model_dump())
         return self.chunks.add(chunk)
 
-    def list_chunks(self, document_id: int) -> list[DocumentChunk]:
-        self.get_document(document_id)
+    def list_chunks(self, user_id: int, document_id: int) -> list[DocumentChunk]:
+        self.get_document(user_id, document_id)
         return self.chunks.list_for_document(document_id)
 
     # ── tables ───────────────────────────────────────────────────
 
-    def add_table(self, document_id: int, payload: FinancialTableCreate) -> FinancialTable:
-        self.get_document(document_id)
+    def add_table(
+        self, user_id: int, document_id: int, payload: FinancialTableCreate
+    ) -> FinancialTable:
+        self.get_document(user_id, document_id)
         if payload.source_chunk_id is not None:
             chunk = self.chunks.get(payload.source_chunk_id)
             if chunk is None or chunk.document_id != document_id:
@@ -205,15 +211,17 @@ class DocumentService:
             )
         return table
 
-    def get_table(self, document_id: int, table_id: int) -> FinancialTable:
-        self.get_document(document_id)
+    def get_table(
+        self, user_id: int, document_id: int, table_id: int
+    ) -> FinancialTable:
+        self.get_document(user_id, document_id)
         table = self.tables.get_with_rows(table_id)
         if table is None or table.document_id != document_id:
             raise NotFoundError("FinancialTable", table_id)
         return table
 
-    def list_tables(self, document_id: int) -> list[FinancialTable]:
-        self.get_document(document_id)
+    def list_tables(self, user_id: int, document_id: int) -> list[FinancialTable]:
+        self.get_document(user_id, document_id)
         tables = self.tables.list_for_document(document_id)
         for table in tables:
             table.rows  # load ordered rows (lazy)
@@ -221,6 +229,6 @@ class DocumentService:
 
     # ── helpers ──────────────────────────────────────────────────
 
-    def _ensure_company(self, company_id: int) -> None:
-        if self.companies.get(company_id) is None:
+    def _ensure_company(self, user_id: int, company_id: int) -> None:
+        if self.companies.get_for_user(company_id, user_id) is None:
             raise NotFoundError("Company", company_id)

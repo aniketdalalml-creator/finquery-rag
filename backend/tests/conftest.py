@@ -172,12 +172,36 @@ def memory_engine():
 
 @pytest.fixture
 def company_factory(db_session):
-    """Creates companies directly through the repository."""
+    """Creates companies owned by a test user (creates one if needed)."""
 
-    def _make(ticker: str, legal_name: str | None = None, **kwargs):
+    def _owner_id(user_id: int | None) -> int:
+        from app.auth.passwords import hash_password
+        from app.models.user import User
+
+        if user_id is not None:
+            return user_id
+        user = db_session.query(User).order_by(User.id).first()
+        if user is None:
+            user = User(
+                email="factory-owner@example.com",
+                hashed_password=hash_password("FactoryPass123!"),
+                is_active=True,
+            )
+            db_session.add(user)
+            db_session.flush()
+        return user.id
+
+    def _make(
+        ticker: str,
+        legal_name: str | None = None,
+        *,
+        user_id: int | None = None,
+        **kwargs,
+    ):
         from app.models.company import Company
 
         company = Company(
+            user_id=_owner_id(user_id),
             legal_name=legal_name or f"{ticker} Test Holdings Inc.",
             display_name=ticker,
             ticker=ticker,
@@ -191,18 +215,15 @@ def company_factory(db_session):
 
 
 @pytest.fixture
-def document_factory(db_session):
-    """Creates a document (and optionally its company) for tests."""
+def document_factory(db_session, company_factory):
+    """Creates a document owned by a test user (and optionally its company)."""
 
-    def _make(company=None, **kwargs):
+    def _make(company=None, *, user_id: int | None = None, **kwargs):
         from app.models.document import Document
 
         if company is None:
-            from app.models.company import Company
-
-            company = Company(legal_name="Factory Co", ticker="FCTY")
-            db_session.add(company)
-            db_session.flush()
+            company = company_factory("FCTY", user_id=user_id)
+        owner_id = user_id if user_id is not None else company.user_id
         defaults = dict(
             document_type="10-K",
             title="Annual Report",
@@ -210,7 +231,11 @@ def document_factory(db_session):
             processing_status="completed",
         )
         defaults.update(kwargs)
-        document = Document(company_id=company.id, **defaults)
+        document = Document(
+            user_id=owner_id,
+            company_id=company.id,
+            **defaults,
+        )
         db_session.add(document)
         db_session.flush()
         return document

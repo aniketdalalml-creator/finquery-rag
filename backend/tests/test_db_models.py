@@ -13,20 +13,23 @@ from app.models.document import Document, DocumentChunk, DocumentPage, DocumentS
 from app.models.metric import FinancialMetric
 
 
-def test_company_creation(db_session):
-    company = Company(legal_name="Apple Inc.", ticker="AAPL", exchange="NASDAQ")
-    db_session.add(company)
-    db_session.flush()
-
+def test_company_creation(db_session, company_factory):
+    company = company_factory("AAPL", legal_name="Apple Inc.", exchange="NASDAQ")
     assert company.id is not None
+    assert company.user_id is not None
     assert company.created_at is not None
     assert company.updated_at is not None
 
 
 def test_duplicate_company_ticker_rejected(db_session, company_factory):
-    company_factory("DUP", exchange="NASDAQ")
+    first = company_factory("DUP", exchange="NASDAQ")
     db_session.add(
-        Company(legal_name="Other Corp", ticker="DUP", exchange="NASDAQ")
+        Company(
+            user_id=first.user_id,
+            legal_name="Other Corp",
+            ticker="DUP",
+            exchange="NASDAQ",
+        )
     )
     with pytest.raises(IntegrityError):
         db_session.flush()
@@ -35,6 +38,7 @@ def test_duplicate_company_ticker_rejected(db_session, company_factory):
 def test_document_creation_and_relationship(db_session, company_factory):
     company = company_factory("REL")
     document = Document(
+        user_id=company.user_id,
         company_id=company.id,
         document_type="10-K",
         title="FY2024 Annual Report",

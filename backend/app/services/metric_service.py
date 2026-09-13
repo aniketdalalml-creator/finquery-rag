@@ -42,10 +42,10 @@ class FinancialMetricService:
         self.chunks = DocumentChunkRepository(session)
 
     def create_metric(
-        self, company_id: int, payload: FinancialMetricCreate
+        self, user_id: int, company_id: int, payload: FinancialMetricCreate
     ) -> FinancialMetric:
-        self._ensure_company(company_id)
-        document = self.documents.get(payload.document_id)
+        self._ensure_company(user_id, company_id)
+        document = self.documents.get_for_user(payload.document_id, user_id)
         if document is None:
             raise NotFoundError("Document", payload.document_id)
         # Provenance rule: the metric's document must belong to the same company.
@@ -81,8 +81,10 @@ class FinancialMetricService:
         )
         return self.metrics.add(metric)
 
-    def get_metric(self, company_id: int, metric_id: int) -> FinancialMetric:
-        self._ensure_company(company_id)
+    def get_metric(
+        self, user_id: int, company_id: int, metric_id: int
+    ) -> FinancialMetric:
+        self._ensure_company(user_id, company_id)
         metric = self.metrics.get(metric_id)
         if metric is None or metric.company_id != company_id:
             raise NotFoundError("FinancialMetric", metric_id)
@@ -90,6 +92,7 @@ class FinancialMetricService:
 
     def list_metrics_for_company(
         self,
+        user_id: int,
         company_id: int,
         metric_name: str | None = None,
         fiscal_year: int | None = None,
@@ -99,7 +102,7 @@ class FinancialMetricService:
         limit: int = 100,
         offset: int = 0,
     ) -> list[FinancialMetric]:
-        self._ensure_company(company_id)
+        self._ensure_company(user_id, company_id)
         normalized = normalize_metric_name(metric_name) if metric_name else None
         return self.metrics.list_for_company(
             company_id,
@@ -112,6 +115,6 @@ class FinancialMetricService:
             offset=max(0, offset),
         )
 
-    def _ensure_company(self, company_id: int) -> None:
-        if self.companies.get(company_id) is None:
+    def _ensure_company(self, user_id: int, company_id: int) -> None:
+        if self.companies.get_for_user(company_id, user_id) is None:
             raise NotFoundError("Company", company_id)

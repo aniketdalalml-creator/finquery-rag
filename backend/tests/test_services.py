@@ -21,73 +21,88 @@ def test_normalize_metric_name_variants():
     assert normalize_metric_name("---") == ""
 
 
-def test_company_service_duplicate_detection(db_session):
+def test_company_service_duplicate_detection(db_session, company_factory):
+    owner_id = company_factory("SEED").user_id
     service = CompanyService(db_session)
     created = service.create_company(
-        CompanyCreate(legal_name="Acme Corp", ticker="ACME", exchange="NYSE")
+        owner_id,
+        CompanyCreate(legal_name="Acme Corp", ticker="ACME", exchange="NYSE"),
     )
 
     with pytest.raises(ConflictError):
-        service.create_company(CompanyCreate(legal_name="acme corp"))
+        service.create_company(owner_id, CompanyCreate(legal_name="acme corp"))
     with pytest.raises(ConflictError):
         service.create_company(
-            CompanyCreate(legal_name="Different Name", ticker="acme", exchange="nyse")
+            owner_id,
+            CompanyCreate(legal_name="Different Name", ticker="acme", exchange="nyse"),
         )
     # Same ticker on a different exchange is allowed.
     other = service.create_company(
-        CompanyCreate(legal_name="Acme Corp Japan", ticker="ACME", exchange="TSE")
+        owner_id,
+        CompanyCreate(legal_name="Acme Corp Japan", ticker="ACME", exchange="TSE"),
     )
     assert other.id != created.id
 
 
-def test_company_service_missing_raises(db_session):
+def test_company_service_missing_raises(db_session, company_factory):
+    owner_id = company_factory("MISS").user_id
     service = CompanyService(db_session)
     with pytest.raises(NotFoundError):
-        service.get_company(99999)
+        service.get_company(owner_id, 99999)
 
 
 def test_document_service_validations(db_session, company_factory):
     service = DocumentService(db_session)
+    company = company_factory("DOCS")
+    owner_id = company.user_id
 
     with pytest.raises(NotFoundError):
         service.create_document(
-            DocumentCreate(company_id=424242, document_type="10-K", title="Orphan")
+            owner_id,
+            DocumentCreate(company_id=424242, document_type="10-K", title="Orphan"),
         )
 
-    company = company_factory("DOCS")
     document = service.create_document(
+        owner_id,
         DocumentCreate(
             company_id=company.id,
             document_type="10-K",
             title="FY2024 10-K",
             file_hash="deadbeef",
-        )
+        ),
     )
+    assert document.user_id == owner_id
     with pytest.raises(ConflictError):
         service.create_document(
+            owner_id,
             DocumentCreate(
                 company_id=company.id,
                 document_type="10-K",
                 title="FY2024 10-K copy",
                 file_hash="deadbeef",
-            )
+            ),
         )
 
 
 def test_document_service_page_and_chunk_rules(db_session, company_factory):
     service = DocumentService(db_session)
     company = company_factory("PGRU")
+    owner_id = company.user_id
     document = service.create_document(
-        DocumentCreate(company_id=company.id, document_type="10-Q", title="Q1")
+        owner_id,
+        DocumentCreate(company_id=company.id, document_type="10-Q", title="Q1"),
     )
 
     page = service.add_page(
-        document.id, DocumentPageCreate(page_number=1, raw_text="first")
+        owner_id, document.id, DocumentPageCreate(page_number=1, raw_text="first")
     )
     with pytest.raises(ConflictError):
-        service.add_page(document.id, DocumentPageCreate(page_number=1, raw_text="dup"))
+        service.add_page(
+            owner_id, document.id, DocumentPageCreate(page_number=1, raw_text="dup")
+        )
 
     chunk = service.add_chunk(
+        owner_id,
         document.id,
         DocumentChunkCreate(chunk_index=0, text="body", chunk_type="text"),
     )
@@ -95,6 +110,7 @@ def test_document_service_page_and_chunk_rules(db_session, company_factory):
 
     with pytest.raises(ValidationError):
         service.add_chunk(
+            owner_id,
             document.id,
             DocumentChunkCreate(chunk_index=1, text="x", section_id=987654),
         )
@@ -106,9 +122,10 @@ def test_metric_service_provenance_enforcement(db_session, company_factory, docu
 
     company_a = company_factory("AAAA")
     company_b = company_factory("BBBB")
+    owner_id = company_a.user_id
     doc_a = document_factory(company=company_a)
     chunk = document_service.add_chunk(
-        doc_a.id, DocumentChunkCreate(chunk_index=0, text="Revenue $1.0B")
+        owner_id, doc_a.id, DocumentChunkCreate(chunk_index=0, text="Revenue $1.0B")
     )
 
     # Missing provenance pointer entirely → schema-level rejection.
@@ -119,6 +136,7 @@ def test_metric_service_provenance_enforcement(db_session, company_factory, docu
     doc_b = document_factory(company=company_b)
     with pytest.raises(ValidationError):
         metric_service.create_metric(
+            owner_id,
             company_b.id,
             FinancialMetricCreate(
                 document_id=doc_b.id,
@@ -131,6 +149,7 @@ def test_metric_service_provenance_enforcement(db_session, company_factory, docu
     # Document of another company → rejected.
     with pytest.raises(ValidationError):
         metric_service.create_metric(
+            owner_id,
             company_b.id,
             FinancialMetricCreate(
                 document_id=doc_a.id,
@@ -142,6 +161,7 @@ def test_metric_service_provenance_enforcement(db_session, company_factory, docu
 
     # Valid: normalized name stored for filtering.
     metric = metric_service.create_metric(
+        owner_id,
         company_a.id,
         FinancialMetricCreate(
             document_id=doc_a.id,
@@ -154,5 +174,7 @@ def test_metric_service_provenance_enforcement(db_session, company_factory, docu
         ),
     )
     assert metric.normalized_metric_name == "gross_profit_margin"
-    found = metric_service.list_metrics_for_company(company_a.id, metric_name="gross profit margin")
+    found = metric_service.list_metrics_for_company(
+        owner_id, company_a.id, metric_name="gross profit margin"
+    )
     assert [m.id for m in found] == [metric.id]

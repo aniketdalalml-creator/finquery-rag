@@ -28,6 +28,9 @@ class Document(Base, TimestampMixin):
     __tablename__ = "documents"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     company_id: Mapped[int | None] = mapped_column(
         ForeignKey("companies.id", ondelete="CASCADE"), nullable=True, index=True
     )
@@ -69,16 +72,17 @@ class Document(Base, TimestampMixin):
     )
 
     __table_args__ = (
-        # Content-level duplicate guard: identical file for the same company.
+        # Content-level duplicate guard: identical file for the same owner+company.
         Index(
-            "uq_documents_company_file_hash",
-            company_id,
-            file_hash,
+            "uq_documents_user_company_file_hash",
+            "user_id",
+            "company_id",
+            "file_hash",
             unique=True,
             sqlite_where=text("file_hash IS NOT NULL"),
             postgresql_where=text("file_hash IS NOT NULL"),
         ),
-        Index("ix_documents_filing_date", filing_date),
+        Index("ix_documents_filing_date", "filing_date"),
         CheckConstraint(
             "reporting_period_end IS NULL OR reporting_period_start IS NULL"
             " OR reporting_period_end >= reporting_period_start",

@@ -10,7 +10,7 @@ class StubService:
         self._error = error
         self.calls = []
 
-    def answer(self, question):
+    def answer(self, question, *, document_ids=None):
         self.calls.append(question)
         if self._error:
             raise self._error
@@ -107,7 +107,7 @@ def test_llm_failure_maps_to_fallback_answer(auth_client, monkeypatch):
         def __init__(self, hits):
             self.hits = hits
 
-        def search(self, embedding, top_k=None, document_id=None):
+        def search(self, embedding, top_k=None, document_id=None, document_ids=None):
             return self.hits
 
     monkeypatch.setattr(rag_routes_module, "RagAnswerService", LlmFailService)
@@ -153,7 +153,7 @@ def test_empty_question_rejected_with_422(auth_client, monkeypatch):
             return [[0.0] for _ in texts]
 
     class FakeR:
-        def search(self, embedding, top_k=None, document_id=None):
+        def search(self, embedding, top_k=None, document_id=None, document_ids=None):
             return []
 
     from app.services.rag_service import RagAnswerService as Real

@@ -15,6 +15,7 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.models.user import User
 from app.schemas.document import (
     DocumentChunkCreate,
     DocumentChunkRead,
@@ -27,6 +28,7 @@ from app.schemas.document import (
     DocumentSectionRead,
 )
 from app.schemas.table import FinancialTableCreate, FinancialTableRead
+from app.security import get_current_user
 from app.services.document_service import DocumentService
 from app.services.ingestion_service import IngestionService, run_ingestion
 from app.services.storage_service import DocumentStorageService
@@ -46,11 +48,12 @@ def _service(db: Session = Depends(get_db)) -> DocumentService:
 def list_documents(
     limit: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
-    """All documents, newest first (documents list view)."""
+    """All documents for the current user, newest first."""
     service = DocumentService(db)
     rows = []
-    for document in service.list_documents(limit=limit):
+    for document in service.list_documents(user.id, limit=limit):
         company_name = None
         if document.company is not None:
             company_name = (
@@ -79,11 +82,13 @@ def upload_document(
     source_url: str | None = Form(default=None),
     source_name: str | None = Form(default=None),
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     """Validate + store a financial document; processing happens separately."""
     service = IngestionService(db)
     data = file.file.read()
     document, _duplicate = service.upload_document(
+        user_id=user.id,
         filename=file.filename or "unnamed",
         data=data,
         storage=DocumentStorageService(get_storage()),
@@ -101,17 +106,22 @@ def process_document(
     background_tasks: BackgroundTasks,
     force: bool = Query(default=False, description="Reprocess even if already processed"),
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     """Queue full pipeline processing (runs in the background)."""
     service = IngestionService(db)
-    service.mark_queued(document_id)
+    service.mark_queued(user.id, document_id)
     background_tasks.add_task(run_ingestion, document_id, force)
     return {"document_id": document_id, "status": "queued"}
 
 
 @router.get("/{document_id}/status")
-def get_document_status(document_id: int, service=Depends(_service)):
-    document = service.get_document(document_id)
+def get_document_status(
+    document_id: int,
+    service=Depends(_service),
+    user: User = Depends(get_current_user),
+):
+    document = service.get_document(user.id, document_id)
     return {
         "document_id": document.id,
         "status": document.processing_status,
@@ -123,18 +133,30 @@ def get_document_status(document_id: int, service=Depends(_service)):
 
 
 @router.post("", response_model=DocumentRead, status_code=status.HTTP_201_CREATED)
-def create_document(payload: DocumentCreate, service=Depends(_service)):
-    return service.create_document(payload)
+def create_document(
+    payload: DocumentCreate,
+    service=Depends(_service),
+    user: User = Depends(get_current_user),
+):
+    return service.create_document(user.id, payload)
 
 
 @router.get("/{document_id}", response_model=DocumentRead)
-def get_document(document_id: int, service=Depends(_service)):
-    return service.get_document(document_id)
+def get_document(
+    document_id: int,
+    service=Depends(_service),
+    user: User = Depends(get_current_user),
+):
+    return service.get_document(user.id, document_id)
 
 
 @router.get("/{document_id}/pages", response_model=list[DocumentPageRead])
-def list_pages(document_id: int, service=Depends(_service)):
-    return service.list_pages(document_id)
+def list_pages(
+    document_id: int,
+    service=Depends(_service),
+    user: User = Depends(get_current_user),
+):
+    return service.list_pages(user.id, document_id)
 
 
 @router.post(
@@ -143,14 +165,21 @@ def list_pages(document_id: int, service=Depends(_service)):
     status_code=status.HTTP_201_CREATED,
 )
 def add_page(
-    document_id: int, payload: DocumentPageCreate, service=Depends(_service)
+    document_id: int,
+    payload: DocumentPageCreate,
+    service=Depends(_service),
+    user: User = Depends(get_current_user),
 ):
-    return service.add_page(document_id, payload)
+    return service.add_page(user.id, document_id, payload)
 
 
 @router.get("/{document_id}/sections", response_model=list[DocumentSectionRead])
-def list_sections(document_id: int, service=Depends(_service)):
-    return service.list_sections(document_id)
+def list_sections(
+    document_id: int,
+    service=Depends(_service),
+    user: User = Depends(get_current_user),
+):
+    return service.list_sections(user.id, document_id)
 
 
 @router.post(
@@ -159,9 +188,12 @@ def list_sections(document_id: int, service=Depends(_service)):
     status_code=status.HTTP_201_CREATED,
 )
 def add_section(
-    document_id: int, payload: DocumentSectionCreate, service=Depends(_service)
+    document_id: int,
+    payload: DocumentSectionCreate,
+    service=Depends(_service),
+    user: User = Depends(get_current_user),
 ):
-    return service.add_section(document_id, payload)
+    return service.add_section(user.id, document_id, payload)
 
 
 @router.get("/{document_id}/chunks", response_model=list[DocumentChunkRead])
@@ -171,8 +203,9 @@ def list_chunks(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     service=Depends(_service),
+    user: User = Depends(get_current_user),
 ):
-    service.get_document(document_id)
+    service.get_document(user.id, document_id)
     return service.chunks.list_for_document(
         document_id, chunk_type=chunk_type, limit=limit, offset=offset
     )
@@ -184,14 +217,21 @@ def list_chunks(
     status_code=status.HTTP_201_CREATED,
 )
 def add_chunk(
-    document_id: int, payload: DocumentChunkCreate, service=Depends(_service)
+    document_id: int,
+    payload: DocumentChunkCreate,
+    service=Depends(_service),
+    user: User = Depends(get_current_user),
 ):
-    return service.add_chunk(document_id, payload)
+    return service.add_chunk(user.id, document_id, payload)
 
 
 @router.get("/{document_id}/tables", response_model=list[FinancialTableRead])
-def list_tables(document_id: int, service=Depends(_service)):
-    return service.list_tables(document_id)
+def list_tables(
+    document_id: int,
+    service=Depends(_service),
+    user: User = Depends(get_current_user),
+):
+    return service.list_tables(user.id, document_id)
 
 
 @router.post(
@@ -200,14 +240,22 @@ def list_tables(document_id: int, service=Depends(_service)):
     status_code=status.HTTP_201_CREATED,
 )
 def add_table(
-    document_id: int, payload: FinancialTableCreate, service=Depends(_service)
+    document_id: int,
+    payload: FinancialTableCreate,
+    service=Depends(_service),
+    user: User = Depends(get_current_user),
 ):
-    return service.add_table(document_id, payload)
+    return service.add_table(user.id, document_id, payload)
 
 
 @router.get("/{document_id}/tables/{table_id}", response_model=FinancialTableRead)
-def get_table(document_id: int, table_id: int, service=Depends(_service)):
-    return service.get_table(document_id, table_id)
+def get_table(
+    document_id: int,
+    table_id: int,
+    service=Depends(_service),
+    user: User = Depends(get_current_user),
+):
+    return service.get_table(user.id, document_id, table_id)
 
 
 # ── company-scoped document listing (kept with documents for clarity) ──
@@ -225,9 +273,11 @@ def list_company_documents(
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     service = DocumentService(db)
     return service.list_documents_for_company(
+        user.id,
         company_id,
         document_type=document_type,
         fiscal_year=fiscal_year,

@@ -12,25 +12,42 @@ from app.repositories.base import BaseRepository
 class DocumentRepository(BaseRepository[Document]):
     model = Document
 
-    def get_by_file_hash(self, company_id: int | None, file_hash: str) -> Document | None:
+    def get_by_file_hash(
+        self, user_id: int, company_id: int | None, file_hash: str
+    ) -> Document | None:
         stmt = select(Document).where(
+            Document.user_id == user_id,
             Document.company_id == company_id,
             func.lower(Document.file_hash) == file_hash.lower(),
         )
         return self._scalar(stmt)
 
-    def list_all(self, limit: int = 50) -> list[Document]:
-        """Newest-first across all companies, company eagerly loaded."""
+    def get_for_user(self, document_id: int, user_id: int) -> Document | None:
         stmt = (
             select(Document)
             .options(selectinload(Document.company))
+            .where(Document.id == document_id, Document.user_id == user_id)
+        )
+        return self._scalar(stmt)
+
+    def list_all(self, user_id: int, limit: int = 50) -> list[Document]:
+        """Newest-first for one owner, company eagerly loaded."""
+        stmt = (
+            select(Document)
+            .options(selectinload(Document.company))
+            .where(Document.user_id == user_id)
             .order_by(Document.id.desc())
             .limit(limit)
         )
         return list(self.session.scalars(stmt).all())
 
+    def list_ids_for_user(self, user_id: int) -> list[int]:
+        stmt = select(Document.id).where(Document.user_id == user_id)
+        return list(self.session.scalars(stmt).all())
+
     def list_by_company(
         self,
+        user_id: int,
         company_id: int,
         document_type: str | None = None,
         fiscal_year: int | None = None,
@@ -39,7 +56,10 @@ class DocumentRepository(BaseRepository[Document]):
     ) -> list[Document]:
         stmt = (
             select(Document)
-            .where(Document.company_id == company_id)
+            .where(
+                Document.user_id == user_id,
+                Document.company_id == company_id,
+            )
             .order_by(
                 Document.filing_date.is_(None),
                 Document.filing_date.desc(),

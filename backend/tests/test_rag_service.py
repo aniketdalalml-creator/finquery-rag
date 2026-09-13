@@ -26,8 +26,14 @@ class FakeRetriever:
         self.hits = hits or []
         self.searches = []
 
-    def search(self, query_embedding, top_k=None, document_id=None):
-        self.searches.append({"top_k": top_k, "document_id": document_id})
+    def search(self, query_embedding, top_k=None, document_id=None, document_ids=None):
+        self.searches.append(
+            {
+                "top_k": top_k,
+                "document_id": document_id,
+                "document_ids": document_ids,
+            }
+        )
         return self.hits
 
 

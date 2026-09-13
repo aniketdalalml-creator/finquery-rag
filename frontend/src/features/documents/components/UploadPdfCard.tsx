@@ -120,7 +120,7 @@ export function UploadPdfCard({ onSuccess }: UploadPdfCardProps) {
         <button
           type="submit"
           disabled={!selected || busy}
-          className="flex items-center gap-2 rounded-xl bg-[#006d38] px-6 py-3 text-body-md font-semibold text-on-primary transition-colors hover:bg-[#005c2f] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-body-md font-semibold text-on-primary transition-colors hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy && <Loader2 size={16} className="animate-spin" />}
           {busy ? 'Uploading…' : 'Upload'}
@@ -132,7 +132,7 @@ export function UploadPdfCard({ onSuccess }: UploadPdfCardProps) {
           role="status"
           className="mt-5 flex items-start gap-3 rounded-xl border border-outline-variant bg-primary-container/40 px-5 py-4 text-body-md text-on-surface"
         >
-          <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-[#00a344]" />
+          <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-success" />
           <span>
             Uploaded successfully — Document ID{' '}
             <strong className="tabular-nums">{state.document.id}</strong>, file{' '}

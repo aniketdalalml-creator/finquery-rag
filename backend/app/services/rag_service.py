@@ -64,13 +64,20 @@ class RagAnswerService:
         self.retriever = retriever or VectorRetriever()
         self.llm_fn = llm_fn or _groq_llm
 
-    def answer(self, question: str) -> dict:
+    def answer(
+        self,
+        question: str,
+        *,
+        document_ids: list[int] | None = None,
+    ) -> dict:
         question = (question or "").strip()
         if not question:
             raise ValidationError("Question must not be empty")
 
         query_embedding = self.provider.generate(question)
-        hits = self.retriever.search(query_embedding)
+        hits = self.retriever.search(
+            query_embedding, document_ids=document_ids
+        )
         sources = [self._source(hit) for hit in hits]
 
         if not hits:
