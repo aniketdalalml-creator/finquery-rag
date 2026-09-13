@@ -14,12 +14,14 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 type ProcessButtonProps = {
   documentId: number
+  force?: boolean
   onFinished: () => void
   onError: (message: string) => void
 }
 
 export function ProcessButton({
   documentId,
+  force = false,
   onFinished,
   onError,
 }: ProcessButtonProps) {
@@ -35,7 +37,7 @@ export function ProcessButton({
   async function handleClick() {
     setRunning(true)
     try {
-      await processDocument(documentId)
+      await processDocument(documentId, force)
       // Poll until the pipeline reports a terminal status.
       for (;;) {
         const status = await getDocumentStatus(documentId)
@@ -60,7 +62,13 @@ export function ProcessButton({
       type="button"
       onClick={handleClick}
       disabled={running}
-      title={running ? 'Processing…' : 'Run the ingestion pipeline'}
+      title={
+        running
+          ? 'Processing…'
+          : force
+            ? 'Re-run ingestion (embed + index)'
+            : 'Run the ingestion pipeline'
+      }
       className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant bg-surface-container-low px-3 py-1.5 text-label-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-50"
     >
       {running ? (
@@ -68,7 +76,7 @@ export function ProcessButton({
       ) : (
         <Play size={14} />
       )}
-      {running ? 'Processing…' : 'Process'}
+      {running ? 'Processing…' : force ? 'Reprocess' : 'Process'}
     </button>
   )
 }

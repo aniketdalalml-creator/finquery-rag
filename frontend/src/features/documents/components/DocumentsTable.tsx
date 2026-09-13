@@ -133,6 +133,16 @@ export function DocumentsTable({
                         onError={onProcessError}
                       />
                     )}
+                    {(doc.processing_status === 'processed' ||
+                      doc.processing_status === 'completed' ||
+                      doc.processing_status === 'partially_processed') && (
+                      <ProcessButton
+                        documentId={doc.id}
+                        force
+                        onFinished={onProcessed}
+                        onError={onProcessError}
+                      />
+                    )}
                     <StatusBadge status={doc.processing_status} />
                   </div>
                 </td>

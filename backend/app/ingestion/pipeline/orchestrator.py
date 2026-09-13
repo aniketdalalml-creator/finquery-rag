@@ -179,6 +179,29 @@ class DocumentIngestionPipeline:
                 rec.details = counts
                 result.counts.update(counts)
 
+            with result.add("embed") as rec:
+                embed_stats = self._embed_document(document.id)
+                rec.details = embed_stats
+                result.counts["embedded"] = int(embed_stats.get("embedded", 0))
+                if (
+                    embed_stats.get("embedded", 0) == 0
+                    and embed_stats.get("pending", 0) > 0
+                ):
+                    raise stage_partial(
+                        "No chunks embedded — check JINA_API_KEY / EMBEDDING_API_KEY",
+                        embed_stats,
+                    )
+
+            with result.add("index") as rec:
+                indexed = self._index_document(document.id)
+                rec.details = {"indexed": indexed}
+                result.counts["indexed"] = indexed
+                if indexed == 0 and result.counts.get("chunks", 0) > 0:
+                    raise stage_partial(
+                        "Chunks were not indexed into Qdrant",
+                        {"chunks": result.counts.get("chunks", 0)},
+                    )
+
             hard_failures = [
                 s for s in result.stages
                 if s.status == FAILED and s.stage not in ("table_extraction", "metric_extraction", "ocr")
@@ -572,6 +595,41 @@ class DocumentIngestionPipeline:
                 document.currency = code.upper()
 
     # ── helpers ──────────────────────────────────────────────────
+
+    def _embed_document(self, document_id: int) -> dict[str, int]:
+        """Embed pending chunks for one document (MySQL), clearing old Qdrant pts."""
+        from app.services.embedding_service import ChunkEmbeddingService
+        from app.services.vector_store_service import get_vector_store
+
+        try:
+            get_vector_store().delete_document(document_id)
+        except Exception as exc:  # noqa: BLE001 — collection may not exist yet
+            logger.warning(
+                "qdrant delete_document skipped document_id=%s: %s",
+                document_id,
+                exc,
+            )
+        return ChunkEmbeddingService(self.session).run(document_id)
+
+    def _index_document(self, document_id: int) -> int:
+        """Upsert embedded chunks for one document into Qdrant."""
+        from sqlalchemy import select
+
+        from app.services.vector_store_service import get_vector_store
+
+        chunks = list(
+            self.session.scalars(
+                select(DocumentChunk).where(
+                    DocumentChunk.document_id == document_id,
+                    DocumentChunk.embedding_vector.is_not(None),
+                )
+            ).all()
+        )
+        if not chunks:
+            return 0
+        store = get_vector_store()
+        store.ensure_collection(vector_size=len(chunks[0].embedding_vector or []))
+        return store.upsert_chunks(chunks)
 
     def _mark_processing(self, document: Document) -> None:
         document.processing_status = "processing"

@@ -38,7 +38,13 @@ def rag_query(
     user: User = Depends(get_current_user),
 ) -> dict:
     document_ids = DocumentRepository(db).list_ids_for_user(user.id)
-    service = RagAnswerService()
+    try:
+        service = RagAnswerService()
+    except Exception as exc:  # noqa: BLE001
+        # Missing embedding key / vector store misconfig → clear 422, not 500.
+        from app.core.errors import ValidationError
+
+        raise ValidationError(str(exc)) from exc
     return service.answer(
         payload.question.strip(),
         document_ids=document_ids,

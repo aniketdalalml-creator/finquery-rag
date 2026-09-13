@@ -153,8 +153,12 @@ export async function listDocuments(): Promise<DocumentListItem[]> {
   return res.json() as Promise<DocumentListItem[]>
 }
 
-export async function processDocument(documentId: number): Promise<void> {
-  const res = await apiFetch(`/v1/documents/${documentId}/process`, {
+export async function processDocument(
+  documentId: number,
+  force = false,
+): Promise<void> {
+  const qs = force ? '?force=true' : ''
+  const res = await apiFetch(`/v1/documents/${documentId}/process${qs}`, {
     method: 'POST',
   })
   if (!res.ok) {

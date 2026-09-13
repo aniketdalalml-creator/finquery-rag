@@ -74,7 +74,15 @@ class RagAnswerService:
         if not question:
             raise ValidationError("Question must not be empty")
 
-        query_embedding = self.provider.generate(question)
+        try:
+            query_embedding = self.provider.generate(question)
+        except Exception as exc:  # noqa: BLE001 — never 500 on embed failures
+            logger.warning("Query embedding failed: %s", exc)
+            raise ValidationError(
+                "Could not embed the question. Check JINA_API_KEY / "
+                "EMBEDDING_API_KEY on the server."
+            ) from exc
+
         hits = self.retriever.search(
             query_embedding, document_ids=document_ids
         )
