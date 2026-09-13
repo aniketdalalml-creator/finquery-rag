@@ -1,6 +1,9 @@
 import type {
   AuthUser,
+  Company,
+  CompanyCreatePayload,
   CompanyOption,
+  CompanyUpdatePayload,
   DashboardStats,
   DocumentListItem,
   DocumentPageItem,
@@ -91,13 +94,55 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   return res.json() as Promise<DashboardStats>
 }
 
-export async function listCompanies(): Promise<CompanyOption[]> {
-  const res = await apiFetch('/v1/companies?limit=100')
+export async function listCompanies(query?: string): Promise<Company[]> {
+  const params = new URLSearchParams({ limit: '100' })
+  if (query?.trim()) params.set('q', query.trim())
+  const res = await apiFetch(`/v1/companies?${params}`)
   if (!res.ok) {
     throw new Error(await parseErrorDetail(res))
   }
-  const body = (await res.json()) as { items: CompanyOption[] }
+  const body = (await res.json()) as { items: Company[] }
   return body.items ?? []
+}
+
+/** Lightweight shape used by upload dropdowns. */
+export async function listCompanyOptions(): Promise<CompanyOption[]> {
+  const items = await listCompanies()
+  return items.map(({ id, ticker, display_name, legal_name }) => ({
+    id,
+    ticker,
+    display_name,
+    legal_name,
+  }))
+}
+
+export async function createCompany(
+  payload: CompanyCreatePayload,
+): Promise<Company> {
+  const res = await apiFetch('/v1/companies', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    throw new Error(await parseErrorDetail(res))
+  }
+  return res.json() as Promise<Company>
+}
+
+export async function updateCompany(
+  companyId: number,
+  payload: CompanyUpdatePayload,
+): Promise<Company> {
+  const res = await apiFetch(`/v1/companies/${companyId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    throw new Error(await parseErrorDetail(res))
+  }
+  return res.json() as Promise<Company>
 }
 
 export async function listDocuments(): Promise<DocumentListItem[]> {

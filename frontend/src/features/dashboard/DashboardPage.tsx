@@ -9,6 +9,7 @@ import { useDashboardStats } from '../../hooks/useDashboardStats'
 import { askQuestion } from '../../services/api'
 import type { RagAnswer } from '../../types/api'
 import DocumentsPage from '../documents/DocumentsPage'
+import CompaniesPage from '../companies/CompaniesPage'
 
 const PAGE_TITLES: Record<NavItemId, string> = {
   dashboard: 'Financial Intelligence',
@@ -107,6 +108,8 @@ export default function DashboardPage() {
         <main className="flex-1 overflow-y-auto px-8 py-8">
           {active === 'documents' ? (
             <DocumentsPage />
+          ) : active === 'companies' ? (
+            <CompaniesPage />
           ) : active === 'dashboard' ? (
             <div className="mx-auto max-w-5xl space-y-10">
               <div>

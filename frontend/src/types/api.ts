@@ -27,6 +27,36 @@ export interface CompanyOption {
   legal_name: string
 }
 
+export interface Company {
+  id: number
+  legal_name: string
+  display_name: string | null
+  ticker: string | null
+  exchange: string | null
+  country: string | null
+  industry: string | null
+  sector: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CompanyCreatePayload {
+  legal_name: string
+  display_name?: string | null
+  ticker?: string | null
+  exchange?: string | null
+  country?: string | null
+  industry?: string | null
+  sector?: string | null
+}
+
+export interface CompanyUpdatePayload {
+  display_name?: string | null
+  country?: string | null
+  industry?: string | null
+  sector?: string | null
+}
+
 export interface UploadedDocument {
   id: number
   company_id: number | null

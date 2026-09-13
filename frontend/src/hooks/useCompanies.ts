@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { listCompanies } from '../services/api'
+import { listCompanyOptions } from '../services/api'
 import type { CompanyOption } from '../types/api'
 
-export function useCompanies(): {
+export function useCompanies(refreshKey = 0): {
   companies: CompanyOption[]
   loading: boolean
   error: string | null
@@ -13,9 +13,13 @@ export function useCompanies(): {
 
   useEffect(() => {
     let cancelled = false
-    listCompanies()
+    setLoading(true)
+    listCompanyOptions()
       .then((items) => {
-        if (!cancelled) setCompanies(items)
+        if (!cancelled) {
+          setCompanies(items)
+          setError(null)
+        }
       })
       .catch((err: Error) => {
         if (!cancelled) setError(err.message)
@@ -26,7 +30,7 @@ export function useCompanies(): {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [refreshKey])
 
   return { companies, loading, error }
 }
